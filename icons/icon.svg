@@ -1,0 +1,35 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4A90D9"/>
+      <stop offset="100%" stop-color="#2563EB"/>
+    </linearGradient>
+    <linearGradient id="dropGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E0EAFF"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#1e3a6e" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- 背景（角丸四角） -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+
+  <!-- 装飾（控えめ） -->
+  <circle cx="100" cy="100" r="140" fill="white" opacity="0.06"/>
+  <circle cx="420" cy="420" r="120" fill="white" opacity="0.04"/>
+
+  <!-- しずく型（Raindrop）＋ ブックマークリボン -->
+  <g filter="url(#shadow)" transform="translate(256, 248)">
+    <!-- しずく本体 -->
+    <path d="M0,-160 C60,-80 120,20 120,80 C120,146 66,200 0,200 C-66,200 -120,146 -120,80 C-120,20 -60,-80 0,-160Z"
+          fill="url(#dropGrad)"/>
+
+    <!-- ブックマークリボン（しずくの中央） -->
+    <g transform="translate(0, 40)">
+      <path d="M-40,-70 L-40,50 L0,25 L40,50 L40,-70 Z"
+            fill="#2563EB" opacity="0.85" stroke="#1d4ed8" stroke-width="2"/>
+    </g>
+  </g>
+</svg>

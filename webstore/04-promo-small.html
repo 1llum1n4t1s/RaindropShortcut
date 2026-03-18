@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 440px; height: 280px;
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    overflow: hidden;
+  }
+  .container {
+    display: flex; align-items: center; gap: 24px;
+  }
+  .icon-box {
+    width: 80px; height: 80px;
+    flex-shrink: 0;
+  }
+  .right {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .title {
+    font-size: 22px; font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <svg class="icon-box" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="dropGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stop-color="#FFFFFF"/>
+          <stop offset="100%" stop-color="#E0EAFF"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(256, 248)">
+        <path d="M0,-160 C60,-80 120,20 120,80 C120,146 66,200 0,200 C-66,200 -120,146 -120,80 C-120,20 -60,-80 0,-160Z" fill="url(#dropGrad)"/>
+        <g transform="translate(0, 40)">
+          <path d="M-40,-70 L-40,50 L0,25 L40,50 L40,-70 Z" fill="#2563EB" opacity="0.85"/>
+        </g>
+      </g>
+    </svg>
+    <div class="right">
+      <div class="title">Raindrop Shortcuts</div>
+      <div class="subtitle">Raindrop.io ブックマークに<br>ワンクリックでアクセス</div>
+    </div>
+  </div>
+</body>
+</html>

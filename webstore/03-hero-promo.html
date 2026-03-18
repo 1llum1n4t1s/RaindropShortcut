@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1280px; height: 800px;
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    overflow: hidden;
+  }
+  .container {
+    display: flex; align-items: center; gap: 80px;
+  }
+  .left {
+    display: flex; flex-direction: column; gap: 28px;
+  }
+  .title {
+    font-size: 52px; font-weight: 800;
+    color: #F1F5F9;
+    line-height: 1.2;
+  }
+  .title span { color: #60A5FA; }
+  .desc {
+    font-size: 22px; color: #94A3B8;
+    line-height: 1.6;
+    max-width: 480px;
+  }
+  .tags {
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .tag {
+    padding: 8px 18px;
+    background: rgba(96, 165, 250, 0.15);
+    border: 1px solid rgba(96, 165, 250, 0.3);
+    border-radius: 20px;
+    color: #60A5FA;
+    font-size: 16px; font-weight: 500;
+  }
+  .popup-mock {
+    width: 340px;
+    background: #1E1E1E;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    overflow: hidden;
+    border: 1px solid #333;
+  }
+  .mock-header {
+    padding: 12px 16px;
+    background: #252525;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #333;
+  }
+  .mock-header-title { color: #E0E0E0; font-size: 14px; font-weight: 600; }
+  .mock-header-icon { color: #888; font-size: 16px; }
+  .mock-search {
+    margin: 10px 12px;
+    padding: 8px 12px;
+    background: #2A2A2E;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #888;
+    font-size: 12px;
+  }
+  .mock-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px;
+    border-bottom: 1px solid #333;
+  }
+  .mock-favicon {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .mock-favicon.blue { background: #3B82F6; }
+  .mock-favicon.green { background: #22C55E; }
+  .mock-favicon.orange { background: #F59E0B; }
+  .mock-favicon.red { background: #EF4444; }
+  .mock-favicon.purple { background: #8B5CF6; }
+  .mock-title { color: #E0E0E0; font-size: 12px; flex: 1; }
+  .mock-domain { color: #666; font-size: 10px; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="left">
+      <div class="title">
+        <span>Raindrop.io</span> の<br>
+        ブックマークに<br>
+        即アクセス
+      </div>
+      <div class="desc">
+        お気に入りのコレクションをワンクリックで表示。
+        検索・フィルタ・ダークモード対応。
+      </div>
+      <div class="tags">
+        <span class="tag">🔖 コンパクト表示</span>
+        <span class="tag">🔍 高速検索</span>
+        <span class="tag">🌙 ダークモード</span>
+        <span class="tag">📂 コレクション切替</span>
+      </div>
+    </div>
+    <div class="popup-mock">
+      <div class="mock-header">
+        <span class="mock-header-title">お気に入り</span>
+        <span class="mock-header-icon">⚙</span>
+      </div>
+      <div class="mock-search">検索...</div>
+      <div class="mock-item"><div class="mock-favicon blue"></div><span class="mock-title">Google フォト</span><span class="mock-domain">photos.google.com</span></div>
+      <div class="mock-item"><div class="mock-favicon green"></div><span class="mock-title">GitHub Dashboard</span><span class="mock-domain">github.com</span></div>
+      <div class="mock-item"><div class="mock-favicon orange"></div><span class="mock-title">Hacker News</span><span class="mock-domain">news.ycombinator.com</span></div>
+      <div class="mock-item"><div class="mock-favicon red"></div><span class="mock-title">YouTube</span><span class="mock-domain">youtube.com</span></div>
+      <div class="mock-item"><div class="mock-favicon purple"></div><span class="mock-title">Figma Projects</span><span class="mock-domain">figma.com</span></div>
+      <div class="mock-item"><div class="mock-favicon blue"></div><span class="mock-title">Twitter / X</span><span class="mock-domain">x.com</span></div>
+      <div class="mock-item"><div class="mock-favicon green"></div><span class="mock-title">Notion Workspace</span><span class="mock-domain">notion.so</span></div>
+    </div>
+  </div>
+</body>
+</html>

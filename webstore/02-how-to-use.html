@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1280px; height: 800px;
+    background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 50%, #C4B5FD 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    overflow: hidden;
+  }
+  .container {
+    text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 48px;
+  }
+  .heading {
+    font-size: 48px; font-weight: 800;
+    color: #4C1D95;
+  }
+  .steps {
+    display: flex; gap: 40px;
+  }
+  .step {
+    width: 280px;
+    background: rgba(255,255,255, 0.85);
+    border-radius: 20px;
+    padding: 36px 24px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .step-number {
+    width: 48px; height: 48px;
+    background: #7C3AED;
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800;
+  }
+  .step-icon { font-size: 48px; }
+  .step-title {
+    font-size: 22px; font-weight: 700;
+    color: #4C1D95;
+  }
+  .step-desc {
+    font-size: 16px; color: #6B21A8;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="heading">かんたん 3 ステップ</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-icon">🔑</div>
+        <div class="step-title">ログイン</div>
+        <div class="step-desc">Raindrop.io アカウントで<br>ワンクリック認証</div>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-icon">📂</div>
+        <div class="step-title">コレクション選択</div>
+        <div class="step-desc">表示したいフォルダを<br>設定画面で選ぶ</div>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-icon">⚡</div>
+        <div class="step-title">即アクセス</div>
+        <div class="step-desc">アイコンクリックで<br>ブックマーク一覧を表示</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

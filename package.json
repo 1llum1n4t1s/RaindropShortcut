@@ -1,0 +1,22 @@
+{
+  "name": "raindrop-shortcut",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "description": "Chrome extension to quickly access Raindrop.io bookmarks",
+  "scripts": {
+    "generate-icons": "node scripts/generate-icons.js",
+    "generate-screenshots": "node webstore/generate-screenshots.js",
+    "build": "npm run generate-icons && npm run generate-screenshots"
+  },
+  "devDependencies": {
+    "puppeteer": "^24.37.5",
+    "sharp": "^0.33.0"
+  },
+  "keywords": [
+    "chrome-extension",
+    "raindrop",
+    "bookmarks"
+  ],
+  "author": "",
+  "license": "MIT"
+}

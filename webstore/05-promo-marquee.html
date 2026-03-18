@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1400px; height: 560px;
+    background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 40%, #2563EB 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+  .deco1 {
+    position: absolute; top: -80px; left: -80px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+  }
+  .deco2 {
+    position: absolute; bottom: -100px; right: -60px;
+    width: 350px; height: 350px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.03);
+  }
+  .container {
+    display: flex; align-items: center; gap: 80px;
+    position: relative; z-index: 1;
+  }
+  .icon-box {
+    width: 180px; height: 180px;
+    flex-shrink: 0;
+  }
+  .right {
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .title {
+    font-size: 56px; font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: 1px;
+  }
+  .subtitle {
+    font-size: 24px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.5;
+  }
+  .tags {
+    display: flex; gap: 12px;
+  }
+  .tag {
+    padding: 8px 20px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    color: rgba(255,255,255,0.9);
+    font-size: 16px; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="deco1"></div>
+  <div class="deco2"></div>
+  <div class="container">
+    <svg class="icon-box" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="dropGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stop-color="#FFFFFF"/>
+          <stop offset="100%" stop-color="#E0EAFF"/>
+        </linearGradient>
+      </defs>
+      <g transform="translate(256, 248)">
+        <path d="M0,-160 C60,-80 120,20 120,80 C120,146 66,200 0,200 C-66,200 -120,146 -120,80 C-120,20 -60,-80 0,-160Z" fill="url(#dropGrad)"/>
+        <g transform="translate(0, 40)">
+          <path d="M-40,-70 L-40,50 L0,25 L40,50 L40,-70 Z" fill="#2563EB" opacity="0.85"/>
+        </g>
+      </g>
+    </svg>
+    <div class="right">
+      <div class="title">Raindrop Shortcuts</div>
+      <div class="subtitle">Raindrop.io のブックマークに<br>ワンクリックでアクセス</div>
+      <div class="tags">
+        <span class="tag">🔖 コンパクト一覧</span>
+        <span class="tag">🔍 高速検索</span>
+        <span class="tag">📂 コレクション切替</span>
+        <span class="tag">🌙 ダークモード</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

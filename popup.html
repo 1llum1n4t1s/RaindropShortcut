@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!-- ログイン画面 -->
+  <div id="screen-login" class="screen">
+    <div class="login-container">
+      <img src="images/icon-128.png" class="login-logo" alt="Raindrop Shortcuts" />
+      <h1 class="login-title">Raindrop Shortcuts</h1>
+      <p class="login-desc">Raindrop.io にログインして<br>ブックマークにアクセス</p>
+      <button id="btn-login" class="btn-primary">ログイン</button>
+      <p id="login-error" class="error-message" hidden></p>
+    </div>
+  </div>
+
+  <!-- メイン画面 -->
+  <div id="screen-main" class="screen" hidden>
+    <header class="main-header">
+      <span id="collection-name" class="collection-name">すべて</span>
+      <button id="btn-settings" class="btn-icon" title="設定">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 13a3 3 0 100-6 3 3 0 000 6zm7.45-2.47l-1.34-.77a6.07 6.07 0 000-1.52l1.34-.77a.5.5 0 00.18-.68l-1-1.73a.5.5 0 00-.68-.18l-1.34.77a6.02 6.02 0 00-1.32-.76l-.2-1.54A.5.5 0 0012.59 3h-2a.5.5 0 00-.5.42l-.2 1.54a6.02 6.02 0 00-1.32.76l-1.34-.77a.5.5 0 00-.68.18l-1 1.73a.5.5 0 00.18.68l1.34.77a6.07 6.07 0 000 1.52l-1.34.77a.5.5 0 00-.18.68l1 1.73a.5.5 0 00.68.18l1.34-.77c.4.32.84.58 1.32.76l.2 1.54a.5.5 0 00.5.42h2a.5.5 0 00.5-.42l.2-1.54a6.02 6.02 0 001.32-.76l1.34.77a.5.5 0 00.68-.18l1-1.73a.5.5 0 00-.18-.68z"/>
+        </svg>
+      </button>
+    </header>
+    <div class="search-bar">
+      <input type="search" id="search-input" placeholder="検索..." autocomplete="off" />
+    </div>
+    <div class="list-container">
+      <ul id="bookmark-list" class="bookmark-list"></ul>
+    </div>
+    <div id="empty-message" class="empty-message" hidden>ブックマークがありません</div>
+  </div>
+
+  <!-- 設定画面 -->
+  <div id="screen-settings" class="screen" hidden>
+    <header class="settings-header">
+      <button id="btn-back" class="btn-icon" title="戻る">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"/>
+        </svg>
+      </button>
+      <span class="settings-title">設定</span>
+    </header>
+    <div class="settings-body">
+      <section class="settings-section">
+        <h3 class="section-title">コレクション</h3>
+        <div id="collection-tree" class="collection-tree">
+          <div class="loading">読み込み中...</div>
+        </div>
+      </section>
+      <section class="settings-section">
+        <h3 class="section-title">テーマ</h3>
+        <div class="theme-selector">
+          <button class="theme-btn selected" data-theme="auto">自動</button>
+          <button class="theme-btn" data-theme="light">ライト</button>
+          <button class="theme-btn" data-theme="dark">ダーク</button>
+        </div>
+      </section>
+      <section class="settings-section">
+        <button id="btn-logout" class="btn-danger">ログアウト</button>
+      </section>
+    </div>
+  </div>
+
+  <script src="scripts/actions.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
