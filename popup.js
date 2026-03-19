@@ -11,6 +11,7 @@ const state = {
   loading: false,
   selectedCollection: null,
   themeMode: ThemeMode.AUTO,
+  linkOpenMode: LinkOpenMode.NEW_TAB,
   collections: [],
   searchQuery: "",
 };
@@ -55,6 +56,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnBack = $("#btn-back");
   const collectionTree = $("#collection-tree");
   const themeBtns = $$(".theme-btn");
+  const linkModeBtns = $$(".link-mode-btn");
   const btnLogout = $("#btn-logout");
 
   // ========== 画面遷移 ==========
@@ -79,6 +81,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     // テーマボタンの選択状態を更新
     themeBtns.forEach((btn) => {
       btn.classList.toggle("selected", btn.dataset.theme === mode);
+    });
+  }
+
+  // ========== リンク開き方 ==========
+
+  function applyLinkOpenMode(mode) {
+    state.linkOpenMode = mode;
+    linkModeBtns.forEach((btn) => {
+      btn.classList.toggle("selected", btn.dataset.mode === mode);
     });
   }
 
@@ -108,7 +119,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     li.append(favicon, title, domain);
     li.addEventListener("click", () => {
-      chrome.tabs.create({ url: item.link });
+      if (state.linkOpenMode === LinkOpenMode.CURRENT) {
+        chrome.tabs.update({ url: item.link });
+        window.close();
+      } else {
+        chrome.tabs.create({ url: item.link });
+      }
     });
 
     return li;
@@ -196,13 +212,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.bookmarks.push(...items);
     state.hasMore = items.length === ApiConfig.PER_PAGE;
 
-    // 検索中は全件フィルタ、通常は差分追加
+    // 名前昇順でソート
+    const collator = new Intl.Collator("ja");
+    state.bookmarks.sort((a, b) => collator.compare(a.title, b.title));
+
+    // 検索中は全件フィルタ、通常は全件再レンダリング（ソート反映のため）
+    state.filteredBookmarks = state.bookmarks;
     if (state.searchQuery) {
       applyFilter();
     } else {
-      state.filteredBookmarks = state.bookmarks;
-      emptyMessage.hidden = items.length > 0 || state.bookmarks.length > 0;
-      appendBookmarks(items);
+      renderBookmarks(state.filteredBookmarks);
     }
   }
 
@@ -367,6 +386,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  // リンク開き方切替
+  linkModeBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.mode;
+      applyLinkOpenMode(mode);
+      chrome.storage.local.set({ [StorageKeys.LINK_OPEN_MODE]: mode });
+    });
+  });
+
   // 検索入力
   searchInput.addEventListener("input", onSearchInput);
 
@@ -386,10 +414,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   const stored = await chrome.storage.local.get([
     StorageKeys.THEME_MODE,
     StorageKeys.SELECTED_COLLECTION,
+    StorageKeys.LINK_OPEN_MODE,
   ]);
 
   // テーマ適用
   applyTheme(stored[StorageKeys.THEME_MODE] || ThemeMode.AUTO);
+
+  // リンク開き方適用
+  applyLinkOpenMode(stored[StorageKeys.LINK_OPEN_MODE] || LinkOpenMode.NEW_TAB);
 
   // コレクション復元
   state.selectedCollection = stored[StorageKeys.SELECTED_COLLECTION] || null;

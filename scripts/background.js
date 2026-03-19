@@ -160,20 +160,24 @@ async function fetchCollections() {
   const roots = rootRes.items || [];
   const children = childRes.items || [];
 
-  // ツリー構造を構築
-  const tree = roots.map((col) => ({
-    _id: col._id,
-    title: col.title,
-    count: col.count,
-    children: children
-      .filter((c) => c.parent && c.parent.$id === col._id)
-      .map((c) => ({
-        _id: c._id,
-        title: c.title,
-        count: c.count,
-        children: [],
-      })),
-  }));
+  // ツリー構造を構築（名前昇順ソート）
+  const collator = new Intl.Collator("ja");
+  const tree = roots
+    .map((col) => ({
+      _id: col._id,
+      title: col.title,
+      count: col.count,
+      children: children
+        .filter((c) => c.parent && c.parent.$id === col._id)
+        .map((c) => ({
+          _id: c._id,
+          title: c.title,
+          count: c.count,
+          children: [],
+        }))
+        .sort((a, b) => collator.compare(a.title, b.title)),
+    }))
+    .sort((a, b) => collator.compare(a.title, b.title));
 
   return { collections: tree };
 }

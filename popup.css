@@ -402,7 +402,8 @@ body {
   gap: 6px;
 }
 
-.theme-btn {
+.theme-btn,
+.link-mode-btn {
   flex: 1;
   padding: 6px 10px;
   font-size: 12px;
@@ -415,11 +416,13 @@ body {
   transition: all 0.15s;
 }
 
-.theme-btn:hover {
+.theme-btn:hover,
+.link-mode-btn:hover {
   border-color: var(--text-tertiary);
 }
 
-.theme-btn.selected {
+.theme-btn.selected,
+.link-mode-btn.selected {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-bg);

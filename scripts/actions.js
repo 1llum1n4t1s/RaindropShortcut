@@ -14,6 +14,7 @@ const StorageKeys = Object.freeze({
   TOKEN_EXPIRY: "tokenExpiry",
   SELECTED_COLLECTION: "selectedCollection",
   THEME_MODE: "themeMode",
+  LINK_OPEN_MODE: "linkOpenMode",
 });
 
 /** @readonly API 設定 */
@@ -24,6 +25,12 @@ const ApiConfig = Object.freeze({
   CLIENT_ID: "69bae7a399c4ee2b01348f86",
   CLIENT_SECRET: "REDACTED_CLIENT_SECRET",
   PER_PAGE: 50,
+});
+
+/** @readonly リンクの開き方 */
+const LinkOpenMode = Object.freeze({
+  CURRENT: "current",
+  NEW_TAB: "newTab",
 });
 
 /** @readonly テーマモード */
