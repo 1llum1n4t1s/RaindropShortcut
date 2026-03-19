@@ -26,12 +26,8 @@ function debounce(fn, ms) {
   };
 }
 
-/** background へメッセージ送信 */
-function sendMessage(msg) {
-  return new Promise((resolve) => {
-    chrome.runtime.sendMessage(msg, resolve);
-  });
-}
+/** background へメッセージ送信（MV3 はネイティブ Promise を返す） */
+const sendMessage = (msg) => chrome.runtime.sendMessage(msg);
 
 // ========== DOM 参照 ==========
 const $ = (sel) => document.querySelector(sel);
@@ -197,14 +193,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     const items = res?.items || [];
-    state.bookmarks = [...state.bookmarks, ...items];
+    state.bookmarks.push(...items);
     state.hasMore = items.length === ApiConfig.PER_PAGE;
 
     // 検索中は全件フィルタ、通常は差分追加
     if (state.searchQuery) {
       applyFilter();
     } else {
-      state.filteredBookmarks = [...state.bookmarks];
+      state.filteredBookmarks = state.bookmarks;
       emptyMessage.hidden = items.length > 0 || state.bookmarks.length > 0;
       appendBookmarks(items);
     }
@@ -221,7 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applyFilter() {
     const q = state.searchQuery.toLowerCase();
     if (!q) {
-      state.filteredBookmarks = [...state.bookmarks];
+      state.filteredBookmarks = state.bookmarks;
     } else {
       state.filteredBookmarks = state.bookmarks.filter(
         (b) =>

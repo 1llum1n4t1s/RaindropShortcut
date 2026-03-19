@@ -193,8 +193,6 @@ async function fetchBookmarks(collectionId, page = 0) {
       title: item.title,
       link: item.link,
       domain: item.domain,
-      excerpt: item.excerpt || "",
-      tags: item.tags || [],
     })),
   };
 }
