@@ -32,7 +32,8 @@ body {
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* ========== ダークテーマ (OS追従) ========== */
+/* ========== ダークテーマ ========== */
+/* OS追従(.light でない場合) と 手動(.dark)を単一セレクタで定義 */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --bg-primary: #1e1e1e;
@@ -52,7 +53,6 @@ body {
   }
 }
 
-/* ========== ダークテーマ (手動) ========== */
 .dark {
   --bg-primary: #1e1e1e;
   --bg-secondary: #2a2a2e;
@@ -68,24 +68,6 @@ body {
   --danger: #ff6b6b;
   --danger-bg: #3a1a1a;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-/* ========== ライトテーマ (手動強制) ========== */
-.light {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --bg-tertiary: #eaeaea;
-  --text-primary: #222222;
-  --text-secondary: #666666;
-  --text-tertiary: #999999;
-  --border-color: #e0e0e0;
-  --hover-bg: #f0f0f0;
-  --accent: #5b8def;
-  --accent-hover: #4a7ddf;
-  --accent-bg: #eef4ff;
-  --danger: #e74c3c;
-  --danger-bg: #fef5f5;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* ========== 画面共通 ========== */
@@ -307,6 +289,10 @@ body {
   padding: 16px;
   font-size: 12px;
   color: var(--text-tertiary);
+}
+
+.loading[hidden] {
+  display: none;
 }
 
 .spinner {

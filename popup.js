@@ -88,6 +88,47 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== ブックマーク一覧レンダリング ==========
 
+  /** ブックマーク1件分の DOM 要素を生成 */
+  function createBookmarkItem(item) {
+    const li = document.createElement("li");
+    li.className = "bookmark-item";
+    li.title = item.title;
+
+    const favicon = document.createElement("img");
+    favicon.className = "bookmark-favicon";
+    favicon.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(item.domain)}`;
+    favicon.width = 16;
+    favicon.height = 16;
+    favicon.alt = "";
+    favicon.loading = "lazy";
+
+    const title = document.createElement("span");
+    title.className = "bookmark-title";
+    title.textContent = item.title;
+
+    const domain = document.createElement("span");
+    domain.className = "bookmark-domain";
+    domain.textContent = item.domain;
+
+    li.append(favicon, title, domain);
+    li.addEventListener("click", () => {
+      chrome.tabs.create({ url: item.link });
+    });
+
+    return li;
+  }
+
+  /** 新しいアイテムだけ末尾に追加（差分レンダリング） */
+  function appendBookmarks(items) {
+    if (items.length === 0) return;
+    const fragment = document.createDocumentFragment();
+    for (const item of items) {
+      fragment.appendChild(createBookmarkItem(item));
+    }
+    bookmarkList.appendChild(fragment);
+  }
+
+  /** 全件置換レンダリング（検索フィルタ時のみ使用） */
   function renderBookmarks(items) {
     bookmarkList.innerHTML = "";
 
@@ -100,55 +141,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     emptyMessage.hidden = true;
-
-    const fragment = document.createDocumentFragment();
-    for (const item of items) {
-      const li = document.createElement("li");
-      li.className = "bookmark-item";
-      li.title = item.title;
-
-      const favicon = document.createElement("img");
-      favicon.className = "bookmark-favicon";
-      favicon.src = `https://www.google.com/s2/favicons?sz=16&domain=${encodeURIComponent(item.domain)}`;
-      favicon.width = 16;
-      favicon.height = 16;
-      favicon.alt = "";
-      favicon.loading = "lazy";
-
-      const title = document.createElement("span");
-      title.className = "bookmark-title";
-      title.textContent = item.title;
-
-      const domain = document.createElement("span");
-      domain.className = "bookmark-domain";
-      domain.textContent = item.domain;
-
-      li.append(favicon, title, domain);
-
-      // クリックで新しいタブを開く
-      li.addEventListener("click", () => {
-        chrome.tabs.create({ url: item.link });
-      });
-
-      fragment.appendChild(li);
-    }
-    bookmarkList.appendChild(fragment);
+    appendBookmarks(items);
   }
 
   // ========== ローディング表示 ==========
 
+  const loadingIndicator = $("#loading-indicator");
+
   function showLoading() {
-    removeLoading();
-    const li = document.createElement("li");
-    li.id = "loading-indicator";
-    li.className = "loading";
-    li.innerHTML = '<span class="spinner"></span>読み込み中...';
-    bookmarkList.appendChild(li);
+    loadingIndicator.hidden = false;
   }
 
   function removeLoading() {
-    const el = bookmarkList.querySelector("#loading-indicator");
-    if (el) el.remove();
+    loadingIndicator.hidden = true;
   }
 
   // ========== ブックマーク読み込み ==========
@@ -195,7 +200,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.bookmarks = [...state.bookmarks, ...items];
     state.hasMore = items.length === ApiConfig.PER_PAGE;
 
-    applyFilter();
+    // 検索中は全件フィルタ、通常は差分追加
+    if (state.searchQuery) {
+      applyFilter();
+    } else {
+      state.filteredBookmarks = [...state.bookmarks];
+      emptyMessage.hidden = items.length > 0 || state.bookmarks.length > 0;
+      appendBookmarks(items);
+    }
   }
 
   async function loadNextPage() {
@@ -288,6 +300,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== 無限スクロール ==========
 
+  const scrollAC = new AbortController();
   let scrollTimer = null;
   listContainer.addEventListener("scroll", () => {
     if (state.loading || !state.hasMore || state.searchQuery) return;
@@ -299,7 +312,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         loadNextPage();
       }
     }, 150);
-  });
+  }, { signal: scrollAC.signal });
+
+  // popup 閉じ時にリスナー解除
+  window.addEventListener("unload", () => scrollAC.abort());
 
   // ========== イベントハンドラ ==========
 
@@ -325,7 +341,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   btnSettings.addEventListener("click", async () => {
     showScreen(Screens.SETTINGS);
     // コレクション一覧を取得
-    collectionTree.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
+    collectionTree.innerHTML = "";
+    const loader = document.createElement("div");
+    loader.className = "loading";
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    loader.append(spinner, "読み込み中...");
+    collectionTree.appendChild(loader);
     const res = await sendMessage({ action: Actions.GET_COLLECTIONS });
     if (res?.collections) {
       state.collections = res.collections;
