@@ -6,8 +6,6 @@ const state = {
   authenticated: false,
   bookmarks: [],
   filteredBookmarks: [],
-  currentPage: 0,
-  hasMore: true,
   loading: false,
   selectedCollection: null,
   themeMode: ThemeMode.AUTO,
@@ -170,65 +168,81 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== ブックマーク読み込み ==========
 
-  async function loadBookmarks(reset = false) {
-    if (state.loading) return;
+  let loadGeneration = 0;
 
+  async function loadBookmarks(reset = false) {
     if (reset) {
       state.bookmarks = [];
       state.filteredBookmarks = [];
-      state.currentPage = 0;
-      state.hasMore = true;
       state.searchQuery = "";
       searchInput.value = "";
       bookmarkList.innerHTML = "";
     }
 
+    const currentGen = ++loadGeneration;
     state.loading = true;
     showLoading();
     emptyMessage.hidden = true;
 
     const collectionId = state.selectedCollection?._id || 0;
-    const res = await sendMessage({
-      action: Actions.GET_BOOKMARKS,
-      collectionId,
-      page: state.currentPage,
-    });
+    const collator = new Intl.Collator("ja");
+    let page = 0;
+    let hasMore = true;
+
+    // 全ページを一括取得（各ページ取得ごとに中間レンダリング）
+    while (hasMore) {
+      const res = await sendMessage({
+        action: Actions.GET_BOOKMARKS,
+        collectionId,
+        page,
+      });
+
+      // コレクション切り替えで新しい読み込みが始まった場合は中断
+      if (currentGen !== loadGeneration) return;
+
+      if (res?.error === "unauthorized") {
+        state.loading = false;
+        removeLoading();
+        showScreen(Screens.LOGIN);
+        return;
+      }
+
+      if (res?.error) {
+        state.loading = false;
+        removeLoading();
+        emptyMessage.hidden = false;
+        emptyMessage.textContent = "読み込みに失敗しました";
+        return;
+      }
+
+      const items = res?.items || [];
+      state.bookmarks.push(...items);
+      hasMore = items.length === ApiConfig.PER_PAGE;
+      page++;
+
+      // ページ取得ごとにソート＆レンダリング（待ち時間中も一覧を表示）
+      // スクロール位置を保存・復元してユーザーの閲覧位置を維持
+      state.bookmarks.sort((a, b) => collator.compare(a.title, b.title));
+      const prevScroll = listContainer.scrollTop;
+      if (state.searchQuery) {
+        applyFilter();
+      } else {
+        state.filteredBookmarks = state.bookmarks;
+        renderBookmarks(state.filteredBookmarks);
+      }
+      listContainer.scrollTop = prevScroll;
+    }
 
     state.loading = false;
     removeLoading();
 
-    if (res?.error === "unauthorized") {
-      showScreen(Screens.LOGIN);
-      return;
-    }
-
-    if (res?.error) {
-      emptyMessage.hidden = false;
-      emptyMessage.textContent = "読み込みに失敗しました";
-      return;
-    }
-
-    const items = res?.items || [];
-    state.bookmarks.push(...items);
-    state.hasMore = items.length === ApiConfig.PER_PAGE;
-
-    // 名前昇順でソート
-    const collator = new Intl.Collator("ja");
-    state.bookmarks.sort((a, b) => collator.compare(a.title, b.title));
-
-    // 検索中は全件フィルタ、通常は全件再レンダリング（ソート反映のため）
-    state.filteredBookmarks = state.bookmarks;
+    // 最終レンダリング（loading=false で空コレクションのメッセージを正しく表示）
     if (state.searchQuery) {
       applyFilter();
     } else {
+      state.filteredBookmarks = state.bookmarks;
       renderBookmarks(state.filteredBookmarks);
     }
-  }
-
-  async function loadNextPage() {
-    if (state.loading || !state.hasMore) return;
-    state.currentPage++;
-    await loadBookmarks();
   }
 
   // ========== 検索フィルタ ==========
@@ -313,24 +327,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return div;
   }
 
-  // ========== 無限スクロール ==========
-
-  const scrollAC = new AbortController();
-  let scrollTimer = null;
-  listContainer.addEventListener("scroll", () => {
-    if (state.loading || !state.hasMore || state.searchQuery) return;
-    if (scrollTimer) return;
-    scrollTimer = setTimeout(() => {
-      scrollTimer = null;
-      const { scrollTop, scrollHeight, clientHeight } = listContainer;
-      if (scrollHeight - scrollTop - clientHeight < 100) {
-        loadNextPage();
-      }
-    }, 150);
-  }, { signal: scrollAC.signal });
-
-  // popup 閉じ時にリスナー解除
-  window.addEventListener("unload", () => scrollAC.abort());
 
   // ========== イベントハンドラ ==========
 
