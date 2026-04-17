@@ -1,0 +1,69 @@
+name: Publish to Chrome Web Store
+
+on:
+  push:
+    branches:
+      - 'release/**'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Chrome Web Store 公開
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v5
+
+      - name: バージョンを取得
+        id: version
+        run: |
+          version=$(grep -oP '(?<="version": ")[^"]+' manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "📦 公開対象バージョン: $version"
+
+      - name: ブランチ名とバージョンの整合性を確認
+        env:
+          BRANCH_VERSION: ${{ github.ref_name }}
+          MANIFEST_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          expected="release/${MANIFEST_VERSION}"
+          if [ "$BRANCH_VERSION" != "$expected" ]; then
+            echo "::error::ブランチ名 ($BRANCH_VERSION) と manifest.json のバージョン ($MANIFEST_VERSION) が一致しません。期待値: $expected"
+            exit 1
+          fi
+          echo "✅ ブランチ名と manifest バージョン一致: $expected"
+
+      - name: Node セットアップ
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+
+      - name: 依存インストール
+        run: npm ci || npm install
+
+      - name: アイコン生成
+        run: node scripts/generate-icons.js
+
+      - name: zip パッケージを作成
+        run: |
+          zip -r raindrop-shortcut.zip manifest.json popup.html popup.js popup.css scripts images \
+            -x "scripts/generate-icons.js" "*.DS_Store" "*.swp" "*~"
+          ls -lh raindrop-shortcut.zip
+
+      - name: Chrome Web Store にアップロード & 公開
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          npx --yes chrome-webstore-upload-cli@3 upload \
+            --source raindrop-shortcut.zip \
+            --extension-id "$CWS_EXTENSION_ID" \
+            --client-id "$CWS_CLIENT_ID" \
+            --client-secret "$CWS_CLIENT_SECRET" \
+            --refresh-token "$CWS_REFRESH_TOKEN" \
+            --auto-publish
+          echo "🎉 Chrome Web Store への公開リクエストを送信したよ〜"
