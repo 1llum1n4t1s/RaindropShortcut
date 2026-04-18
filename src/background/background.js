@@ -1,4 +1,4 @@
-importScripts("/scripts/actions.js");
+importScripts("/src/lib/actions.js");
 
 // ========== トークン管理 ==========
 
