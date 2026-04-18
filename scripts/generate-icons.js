@@ -4,7 +4,7 @@ const path = require('path');
 
 const sizes = [16, 48, 128];
 const svgPath = path.join(__dirname, '../icons/icon.svg');
-const imagesDir = path.join(__dirname, '../images');
+const iconsDir = path.join(__dirname, '../icons');
 
 async function generateIcons() {
   console.log('🎨 アイコン生成を開始します...\n');
@@ -16,11 +16,11 @@ async function generateIcons() {
   }
 
   // imagesディレクトリの作成（recursive は既存でも安全）
-  fs.mkdirSync(imagesDir, { recursive: true });
+  fs.mkdirSync(iconsDir, { recursive: true });
 
   // 各サイズのPNGを並列生成
   await Promise.all(sizes.map(async (size) => {
-    const outputPath = path.join(imagesDir, `icon-${size}.png`);
+    const outputPath = path.join(iconsDir, `icon-${size}.png`);
     try {
       await sharp(svgPath)
         .resize(size, size)
@@ -36,7 +36,7 @@ async function generateIcons() {
   console.log('\n🎉 アイコン生成が完了しました！');
   console.log('\n📂 生成されたファイル:');
   sizes.forEach(size => {
-    console.log(`   - images/icon-${size}.png`);
+    console.log(`   - icons/icon-${size}.png`);
   });
 }
 

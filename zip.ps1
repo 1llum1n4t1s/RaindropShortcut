@@ -31,14 +31,11 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 Write-Host "必要なファイルをコピー中..." -ForegroundColor Yellow
 
 Copy-Item "manifest.json" -Destination $tempDir
-Copy-Item "popup.html" -Destination $tempDir
-Copy-Item "popup.js" -Destination $tempDir
-Copy-Item "popup.css" -Destination $tempDir
-Copy-Item "scripts" -Destination $tempDir -Recurse
-Copy-Item "images" -Destination $tempDir -Recurse
+Copy-Item "icons" -Destination $tempDir -Recurse
+Copy-Item "src" -Destination $tempDir -Recurse
 
 # 不要なファイルを除外
-Get-ChildItem -Path $tempDir -Recurse -Include "generate-icons.js", "*.DS_Store", "*.swp", "*~" | Remove-Item -Force
+Get-ChildItem -Path $tempDir -Recurse -Include "*.DS_Store", "*.swp", "*~" | Remove-Item -Force
 
 # ZIPファイルを作成
 Write-Host "ZIPファイルを作成中..." -ForegroundColor Cyan

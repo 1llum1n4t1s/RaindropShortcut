@@ -1,6 +1,6 @@
 {
   "name": "raindrop-shortcut",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "type": "commonjs",
   "description": "Chrome extension to quickly access Raindrop.io bookmarks",
   "scripts": {

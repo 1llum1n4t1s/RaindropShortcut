@@ -1,4 +1,6 @@
 node_modules/
-images/
+webstore/images/
+icons/icon-*.png
+temp-build/
 *.zip
 raindrop-shortcut/

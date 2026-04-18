@@ -48,8 +48,8 @@ jobs:
 
       - name: zip パッケージを作成
         run: |
-          zip -r raindrop-shortcut.zip manifest.json popup.html popup.js popup.css scripts images \
-            -x "scripts/generate-icons.js" "*.DS_Store" "*.swp" "*~"
+          zip -r raindrop-shortcut.zip manifest.json icons src \
+            -x "*.DS_Store" "*.swp" "*~"
           ls -lh raindrop-shortcut.zip
 
       - name: Chrome Web Store にアップロード & 公開
