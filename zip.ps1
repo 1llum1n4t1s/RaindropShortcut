@@ -31,7 +31,9 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 Write-Host "必要なファイルをコピー中..." -ForegroundColor Yellow
 
 Copy-Item "manifest.json" -Destination $tempDir
-Copy-Item "icons" -Destination $tempDir -Recurse
+# icons/ は PNG のみコピー (icon.svg 原本は配布 ZIP に含めない)
+New-Item -ItemType Directory -Path "$tempDir\icons" | Out-Null
+Copy-Item "icons\icon-16.png", "icons\icon-48.png", "icons\icon-128.png" -Destination "$tempDir\icons"
 Copy-Item "src" -Destination $tempDir -Recurse
 
 # 不要なファイルを除外

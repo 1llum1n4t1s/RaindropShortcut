@@ -20,7 +20,9 @@ fi
 
 zip -r ./raindrop-shortcut.zip \
   manifest.json \
-  icons/ \
+  icons/icon-16.png \
+  icons/icon-48.png \
+  icons/icon-128.png \
   src/ \
   -x "*.DS_Store" "*.swp" "*~"
 

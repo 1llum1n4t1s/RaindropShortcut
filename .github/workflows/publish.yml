@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: リポジトリをチェックアウト
-        uses: actions/checkout@v5
+        # actions/checkout v5.0.0 (commit SHA で固定)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: バージョンを取得
         id: version
@@ -36,30 +37,35 @@ jobs:
           echo "✅ ブランチ名と manifest バージョン一致: $expected"
 
       - name: Node セットアップ
-        uses: actions/setup-node@v5
+        # actions/setup-node v5 (commit SHA で固定)
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: 依存インストール
-        run: npm ci || npm install
+        # lockfile 整合性を強制するため npm ci のみ。失敗時はフォールバックせず原因修正を強制。
+        run: npm ci
 
       - name: アイコン生成
         run: node scripts/generate-icons.js
 
       - name: zip パッケージを作成
         run: |
-          zip -r raindrop-shortcut.zip manifest.json icons src \
+          zip -r raindrop-shortcut.zip manifest.json icons/icon-16.png icons/icon-48.png icons/icon-128.png src \
             -x "*.DS_Store" "*.swp" "*~"
           ls -lh raindrop-shortcut.zip
 
       - name: Chrome Web Store にアップロード & 公開
+        # chrome-webstore-upload-cli はローカル devDep にインストール済 (package.json で固定)
+        # secrets を持つステップで npm レジストリから未検証コードを取得しない方針。
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
           CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
           CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
         run: |
-          npx --yes chrome-webstore-upload-cli@3 upload \
+          npx --no-install chrome-webstore-upload-cli upload \
             --source raindrop-shortcut.zip \
             --extension-id "$CWS_EXTENSION_ID" \
             --client-id "$CWS_CLIENT_ID" \
