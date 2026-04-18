@@ -7,7 +7,7 @@ const OAuthConfig = Object.freeze({
   BASE_URL: "https://api.raindrop.io",
   AUTH_URL: "https://raindrop.io/oauth/authorize",
   TOKEN_URL: "https://raindrop.io/oauth/access_token",
-  CLIENT_ID: "69e39af2a0449123c4ca7506",
+  CLIENT_ID: "69e39b56c5bf5a0ca8930817",
   CLIENT_SECRET: "1d28d852-be1d-4e6c-92a0-5caa49f59f87",
   REFRESH_THRESHOLD_MS: 5 * 60 * 1000,
   FETCH_TIMEOUT_MS: 15_000,
