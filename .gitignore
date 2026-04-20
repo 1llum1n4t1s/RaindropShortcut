@@ -5,6 +5,11 @@ temp-build/
 *.zip
 raindrop-shortcut/
 
+# エディタ・ツールのローカルデータ
+.serena/
+.vscode/
+.idea/
+
 # 秘密情報 (将来の誤コミット防止)
 .env
 .env.*
