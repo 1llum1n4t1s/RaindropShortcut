@@ -30,7 +30,9 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 # 必要なファイルをコピー
 Write-Host "必要なファイルをコピー中..." -ForegroundColor Yellow
 
-Copy-Item "manifest.json" -Destination $tempDir
+# manifest.json から key フィールドを除去してコピー (key はローカル開発専用、ストアアップロード時は不要)
+# Node を使って JSON 操作 (PowerShell の ConvertFrom-Json が Unicode エスケープで日本語を壊すため)
+node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('$tempDir/manifest.json',JSON.stringify(m,null,2))"
 # icons/ は PNG のみコピー (icon.svg 原本は配布 ZIP に含めない)
 New-Item -ItemType Directory -Path "$tempDir\icons" | Out-Null
 Copy-Item "icons\icon-16.png", "icons\icon-48.png", "icons\icon-128.png" -Destination "$tempDir\icons"

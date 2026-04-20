@@ -18,13 +18,17 @@ if ! command -v zip &> /dev/null; then
   exit 1
 fi
 
-zip -r ./raindrop-shortcut.zip \
-  manifest.json \
-  icons/icon-16.png \
-  icons/icon-48.png \
-  icons/icon-128.png \
-  src/ \
-  -x "*.DS_Store" "*.swp" "*~"
+# manifest.json から key フィールドを除去したビルドディレクトリを作成
+# (key はローカル開発専用、ストアアップロード時は不要)
+BUILD_DIR=$(mktemp -d)
+trap "rm -rf $BUILD_DIR" EXIT
+
+node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('$BUILD_DIR/manifest.json',JSON.stringify(m,null,2))"
+mkdir -p "$BUILD_DIR/icons"
+cp icons/icon-16.png icons/icon-48.png icons/icon-128.png "$BUILD_DIR/icons/"
+cp -r src "$BUILD_DIR/"
+
+(cd "$BUILD_DIR" && zip -r "$OLDPWD/raindrop-shortcut.zip" . -x "*.DS_Store" "*.swp" "*~")
 
 if [ $? -eq 0 ]; then
   echo "ZIPファイルを作成しました: raindrop-shortcut.zip"

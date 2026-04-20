@@ -40,6 +40,8 @@ scripts/                # 開発用スクリプト (generate-icons.js)
 
 **OAuth 認証情報 (CLIENT_ID / CLIENT_SECRET / エンドポイント URL 等) は `src/background/background.js` 内の `OAuthConfig` で保持**し、popup 側には露出させない。ただし Chrome 拡張の配布 ZIP は公開されるため client_secret は構造的に漏洩する。Raindrop.io が PKCE を提供していないことによる既知の制約。
 
+**`manifest.json` の `key` フィールドは拡張機能の公開鍵** (Chrome Web Store が署名に使うものを埋め込み済)。これによりローカル読み込み時の Extension ID が本番 (`jdehenbjjipaibjccdblhdhffmlggdnp`) と一致し、`chrome.identity.getRedirectURL()` の値も一致する → Raindrop.io に redirect URI を二重登録する必要がない。公開鍵なので漏洩リスクはない。ストアへのアップロード時は `zip.ps1` / `zip.sh` / `publish.yml` が manifest から `key` を除去する (ストア側が署名鍵を管理するため実質不要)。
+
 ## Architecture
 
 popup.js が `chrome.runtime.sendMessage` で background.js (Service Worker) と通信する。API 呼び出しとトークン管理は全て background 側に集約されている。
