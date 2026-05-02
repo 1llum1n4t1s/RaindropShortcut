@@ -33,6 +33,7 @@
 - **raindrop.io** — OAuth 2.0 認証（ログイン・トークン更新）
 - **api.raindrop.io** — ブックマーク・コレクション情報の取得
 - **www.google.com (Favicon Service)** — ブックマーク一覧に表示する favicon 画像の取得のため、各ブックマークのドメイン名のみを送信します。ブックマーク自体のタイトル・URL・その他の個人識別情報は送信しません。
+- **fonts.googleapis.com / fonts.gstatic.com (Google Fonts)** — ポップアップ UI のフォント (IBM Plex Sans JP / IBM Plex Mono) を取得するため、ブラウザがフォント定義 CSS とフォントファイル (woff2) を読み込みます。ユーザーのブックマーク情報は送信しません。フォントは初回取得後ブラウザキャッシュされます。
 
 上記以外のサーバーとの通信は一切行いません。
 

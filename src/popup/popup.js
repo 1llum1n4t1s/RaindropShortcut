@@ -94,10 +94,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== \u30d6\u30c3\u30af\u30de\u30fc\u30af\u4e00\u89a7\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0 ==========
 
-  function createBookmarkItem(item) {
+  function createBookmarkItem(item, index = 0, animate = true) {
     const li = document.createElement("li");
     li.className = "bookmark-item";
     li.title = item.title;
+    // 先頭 ~30 件のみスタッガード・フェードイン用の --i を渡す
+    if (animate) {
+      if (index < 30) li.style.setProperty("--i", String(index));
+    } else {
+      li.classList.add("no-anim");
+    }
 
     const favicon = document.createElement("img");
     favicon.className = "bookmark-favicon";
@@ -128,7 +134,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return li;
   }
 
-  function renderBookmarks(items) {
+  function renderBookmarks(items, animate = false) {
     bookmarkList.innerHTML = "";
 
     if (items.length === 0 && !state.loading) {
@@ -141,19 +147,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     emptyMessage.hidden = true;
     const fragment = document.createDocumentFragment();
-    for (const item of items) {
-      fragment.appendChild(createBookmarkItem(item));
-    }
+    items.forEach((item, i) => fragment.appendChild(createBookmarkItem(item, i, animate)));
     bookmarkList.appendChild(fragment);
   }
 
-  /** \u30d5\u30a3\u30eb\u30bf\u9069\u7528\u3068\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u306e\u5171\u901a\u5f15\u304d\u8fbc\u307f */
-  function rerender() {
+  /**
+   * \u30d5\u30a3\u30eb\u30bf\u9069\u7528\u3068\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u306e\u5171\u901a\u5f15\u304d\u8fbc\u307f\u3002
+   * animate=true \u306f\u300c\u521d\u3081\u3066\u8868\u793a\u3059\u308b\u300d\u5834\u9762\u3060\u3051\u306b\u4ed8\u3051\u308b\u3002
+   * \u30ad\u30e3\u30c3\u30b7\u30e5\u8868\u793a\u5f8c\u306e\u5dee\u5206\u66f4\u65b0\u3084\u4e2d\u9593\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u306f animate=false \u3067\u4e8c\u91cd\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3\u3092\u9632\u3050\u3002
+   */
+  function rerender(animate = false) {
     if (state.searchQuery) {
-      applyFilter();
+      applyFilter(animate);
     } else {
       state.filteredBookmarks = state.bookmarks;
-      renderBookmarks(state.bookmarks);
+      renderBookmarks(state.bookmarks, animate);
     }
   }
 
@@ -305,7 +313,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== \u691c\u7d22\u30d5\u30a3\u30eb\u30bf ==========
 
-  function applyFilter() {
+  function applyFilter(animate = false) {
     const q = state.searchQuery.toLowerCase();
     if (!q) {
       state.filteredBookmarks = state.bookmarks;
@@ -314,12 +322,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         (b) => b._titleLower.includes(q) || b._domainLower.includes(q),
       );
     }
-    renderBookmarks(state.filteredBookmarks);
+    renderBookmarks(state.filteredBookmarks, animate);
   }
 
   const onSearchInput = debounce(() => {
     state.searchQuery = searchInput.value.trim();
-    applyFilter();
+    // 検索クエリ変更時は「あたらしい結果」なので animate=true
+    applyFilter(true);
   }, SharedConfig.SEARCH_DEBOUNCE_MS);
 
   // ========== \u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u30c4\u30ea\u30fc ==========
@@ -415,9 +424,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     collectionTree.innerHTML = "";
     const loader = document.createElement("div");
     loader.className = "loading";
-    const spinner = document.createElement("span");
-    spinner.className = "spinner";
-    loader.append(spinner, "\u8aad\u307f\u8fbc\u307f\u4e2d...");
+    const dot = document.createElement("span");
+    dot.className = "pulse-dot";
+    const label = document.createElement("span");
+    label.textContent = "\u8aad\u307f\u8fbc\u307f\u4e2d";
+    loader.append(dot, label);
     collectionTree.appendChild(loader);
 
     const res = await sendMessage({ action: Actions.GET_COLLECTIONS });
@@ -503,8 +514,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (cacheFresh) {
       state.bookmarks = cache.items.map(normalize);
       state.filteredBookmarks = state.bookmarks;
-      renderBookmarks(state.filteredBookmarks);
-      // \u30d0\u30c3\u30af\u30b0\u30e9\u30a6\u30f3\u30c9\u3067\u5dee\u5206\u66f4\u65b0
+      // \u30ad\u30e3\u30c3\u30b7\u30e5\u521d\u56de\u8868\u793a\u306f\u300c\u521d\u3081\u3066\u898b\u305b\u308b\u300d\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3
+      renderBookmarks(state.filteredBookmarks, true);
+      // \u30d0\u30c3\u30af\u30b0\u30e9\u30a6\u30f3\u30c9\u3067\u5dee\u5206\u66f4\u65b0 (animate=false \u3067\u4e8c\u91cd\u30d5\u30a7\u30fc\u30c9\u3092\u56de\u907f)
       loadBookmarks(false);
     } else {
       loadBookmarks(true);

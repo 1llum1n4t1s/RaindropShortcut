@@ -31,6 +31,7 @@ Chrome Web Store からインストールできます（公開後リンク掲載
 - OAuth 2.0 認証を使用。パスワードを拡張機能に入力する必要はありません
 - 個人情報の収集・外部送信は一切行いません
 - favicon 画像取得のためにブックマークのドメイン名のみ Google Favicon Service へ送信します
+- ポップアップ UI の Web フォント (IBM Plex Sans JP / IBM Plex Mono) を Google Fonts CDN から取得します。オフライン時はシステムフォント (Yu Gothic UI / Hiragino Kaku Gothic ProN 等) にフォールバックします
 - 詳細は [プライバシーポリシー](docs/privacy-policy.md) をご覧ください
 
 ## ライセンス
