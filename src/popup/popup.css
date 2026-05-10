@@ -1,6 +1,8 @@
 /* ==========================================================================
-   Raindrop Shortcuts — Editorial Index
+   Raindrop Shortcut — After-Rain Index
+   Concept   : 雨上がりの澄んだ空。ガラス越しの清涼感、霧雨ブルー、波紋。
    Typography: IBM Plex Sans JP / IBM Plex Mono
+   Accent    : Rain Blue (#3F94BD) — 青寄りの水色、雨そのものの色
    ========================================================================== */
 
 /* ---------- Reset ---------- */
@@ -19,68 +21,130 @@ button {
   border: 0;
 }
 
-/* ---------- Tokens (Light · Paper) ---------- */
+/* ---------- Tokens (Light · Mist) ---------- */
 :root {
-  --paper:        #F4EFE5;
-  --paper-soft:   #ECE6D8;
-  --paper-deep:   #DED5C2;
-  --ink:          #1A1714;
-  --ink-soft:     #5F574B;
-  --ink-mute:     #7C7464;
-  --rule:         rgba(26, 23, 20, 0.08);
-  --rule-bold:    rgba(26, 23, 20, 0.18);
-  --accent:       #B85D2D;
-  --accent-deep:  #9D4A1F;
-  --accent-soft:  rgba(184, 93, 45, 0.08);
-  --accent-tint:  rgba(184, 93, 45, 0.14);
-  --danger:       #B5321F;
-  --danger-soft:  rgba(181, 50, 31, 0.08);
+  /* Surface — 雨上がりの薄曇りの空 */
+  --paper:        #F6F9FC;
+  --paper-soft:   #ECF2F7;
+  --paper-deep:   #DEE7EF;
+  --paper-card:   #FFFFFF;
 
+  /* Ink — 濡れた石の色 (青みのある墨) */
+  --ink:          #1B2738;
+  --ink-soft:     #54657A;
+  --ink-mute:     #8195A8;
+
+  /* Lines */
+  --rule:         rgba(27, 39, 56, 0.07);
+  --rule-bold:    rgba(27, 39, 56, 0.14);
+
+  /* Accent — Rain Blue (雨色) */
+  --accent:       #3F94BD;
+  --accent-deep:  #2A78A0;
+  --accent-bright:#6FB7D6;
+  --accent-soft:  rgba(63, 148, 189, 0.08);
+  --accent-tint:  rgba(63, 148, 189, 0.16);
+  --accent-glow:  rgba(63, 148, 189, 0.30);
+
+  /* Status */
+  --danger:       #C04A55;
+  --danger-soft:  rgba(192, 74, 85, 0.08);
+
+  /* Atmosphere — 雨の層 (radial gradient bg) */
+  --atmos-1:      rgba(111, 183, 214, 0.18);
+  --atmos-2:      rgba(63, 148, 189, 0.10);
+
+  /* Shadows — ガラスのソフトシャドウ */
+  --shadow-soft:  0 1px 2px rgba(27, 39, 56, 0.04),
+                  0 8px 24px -12px rgba(63, 148, 189, 0.18);
+  --shadow-glow:  0 0 0 1px var(--accent-tint),
+                  0 8px 24px -8px var(--accent-glow);
+
+  /* Type */
   --font-sans: "IBM Plex Sans JP", "IBM Plex Sans", -apple-system, "Segoe UI",
                "Hiragino Kaku Gothic ProN", "Yu Gothic UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* Motion */
+  --ease:       cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-rain:  cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Radius */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
 
   color-scheme: light;
 }
 
-/* ---------- Tokens (Dark · Ink) ---------- */
+/* ---------- Tokens (Dark · Night Rain) ---------- */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --paper:        #131110;
-    --paper-soft:   #1C1916;
-    --paper-deep:   #28231E;
-    --ink:          #EFE8D6;
-    --ink-soft:     #ACA395;
-    --ink-mute:     #A89F8E;
-    --rule:         rgba(239, 232, 214, 0.08);
-    --rule-bold:    rgba(239, 232, 214, 0.18);
-    --accent:       #E08A52;
-    --accent-deep:  #F0A06E;
-    --accent-soft:  rgba(224, 138, 82, 0.10);
-    --accent-tint:  rgba(224, 138, 82, 0.16);
-    --danger:       #E0613D;
-    --danger-soft:  rgba(224, 97, 61, 0.10);
+    --paper:        #0E1721;
+    --paper-soft:   #15212E;
+    --paper-deep:   #1D2D3F;
+    --paper-card:   #1A2735;
+
+    --ink:          #DEE9F4;
+    --ink-soft:     #95A8BC;
+    --ink-mute:     #5E7185;
+
+    --rule:         rgba(222, 233, 244, 0.07);
+    --rule-bold:    rgba(222, 233, 244, 0.16);
+
+    --accent:       #6BBADD;
+    --accent-deep:  #95D2EE;
+    --accent-bright:#4F9CC0;
+    --accent-soft:  rgba(107, 186, 221, 0.10);
+    --accent-tint:  rgba(107, 186, 221, 0.20);
+    --accent-glow:  rgba(107, 186, 221, 0.36);
+
+    --danger:       #E08593;
+    --danger-soft:  rgba(224, 133, 147, 0.10);
+
+    --atmos-1:      rgba(107, 186, 221, 0.10);
+    --atmos-2:      rgba(149, 210, 238, 0.06);
+
+    --shadow-soft:  0 1px 2px rgba(0, 0, 0, 0.32),
+                    0 12px 32px -16px rgba(0, 0, 0, 0.6);
+    --shadow-glow:  0 0 0 1px var(--accent-tint),
+                    0 8px 24px -8px var(--accent-glow);
+
     color-scheme: dark;
   }
 }
 
 .dark {
-  --paper:        #131110;
-  --paper-soft:   #1C1916;
-  --paper-deep:   #28231E;
-  --ink:          #EFE8D6;
-  --ink-soft:     #ACA395;
-  --ink-mute:     #6E6557;
-  --rule:         rgba(239, 232, 214, 0.08);
-  --rule-bold:    rgba(239, 232, 214, 0.18);
-  --accent:       #E08A52;
-  --accent-deep:  #F0A06E;
-  --accent-soft:  rgba(224, 138, 82, 0.10);
-  --accent-tint:  rgba(224, 138, 82, 0.16);
-  --danger:       #E0613D;
-  --danger-soft:  rgba(224, 97, 61, 0.10);
+  --paper:        #0E1721;
+  --paper-soft:   #15212E;
+  --paper-deep:   #1D2D3F;
+  --paper-card:   #1A2735;
+
+  --ink:          #DEE9F4;
+  --ink-soft:     #95A8BC;
+  --ink-mute:     #5E7185;
+
+  --rule:         rgba(222, 233, 244, 0.07);
+  --rule-bold:    rgba(222, 233, 244, 0.16);
+
+  --accent:       #6BBADD;
+  --accent-deep:  #95D2EE;
+  --accent-bright:#4F9CC0;
+  --accent-soft:  rgba(107, 186, 221, 0.10);
+  --accent-tint:  rgba(107, 186, 221, 0.20);
+  --accent-glow:  rgba(107, 186, 221, 0.36);
+
+  --danger:       #E08593;
+  --danger-soft:  rgba(224, 133, 147, 0.10);
+
+  --atmos-1:      rgba(107, 186, 221, 0.10);
+  --atmos-2:      rgba(149, 210, 238, 0.06);
+
+  --shadow-soft:  0 1px 2px rgba(0, 0, 0, 0.32),
+                  0 12px 32px -16px rgba(0, 0, 0, 0.6);
+  --shadow-glow:  0 0 0 1px var(--accent-tint),
+                  0 8px 24px -8px var(--accent-glow);
+
   color-scheme: dark;
 }
 
@@ -94,22 +158,33 @@ body {
   font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.55;
-  font-feature-settings: "palt" 1;
+  font-feature-settings: "palt" 1, "ss01" 1;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-/* Subtle vignette adds depth without noise */
+/* Atmosphere — 雨上がりの光が差し込むようなアンビエント */
 body::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(120% 80% at 100% 0%, var(--accent-soft), transparent 55%),
-    radial-gradient(80% 60% at 0% 100%, var(--accent-soft), transparent 55%);
-  opacity: 0.6;
+    radial-gradient(140% 90% at 100% -10%, var(--atmos-1), transparent 55%),
+    radial-gradient(90% 70% at -10% 110%, var(--atmos-2), transparent 60%);
   z-index: 0;
+}
+
+/* Subtle rain texture — 微細な雨筋 (SVG inline, ほぼ見えない強さ) */
+body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><g stroke='%233F94BD' stroke-width='0.6' stroke-linecap='round' opacity='0.06'><line x1='12' y1='10' x2='8' y2='28'/><line x1='44' y1='30' x2='40' y2='52'/><line x1='80' y1='8' x2='76' y2='30'/><line x1='118' y1='44' x2='114' y2='66'/><line x1='148' y1='14' x2='144' y2='34'/><line x1='28' y1='80' x2='24' y2='102'/><line x1='62' y1='100' x2='58' y2='122'/><line x1='96' y1='84' x2='92' y2='106'/><line x1='130' y1='120' x2='126' y2='142'/><line x1='14' y1='130' x2='10' y2='150'/></g></svg>");
+  background-size: 160px 160px;
 }
 
 ::selection {
@@ -124,14 +199,14 @@ body::before {
   display: flex;
   flex-direction: column;
   height: 600px;
-  animation: screen-in 220ms var(--ease);
+  animation: screen-in 360ms var(--ease-rain);
 }
 
 .screen[hidden] { display: none; }
 
 @keyframes screen-in {
-  from { opacity: 0; transform: translateY(2px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+  to   { opacity: 1; transform: translateY(0);  filter: blur(0); }
 }
 
 /* ============================================================
@@ -147,16 +222,42 @@ body::before {
   text-align: center;
 }
 
+/* Login mark — 雫を内包した円 (波紋アニメーション) */
 .login-mark {
-  width: 56px;
-  height: 56px;
+  position: relative;
+  width: 64px;
+  height: 64px;
   display: grid;
   place-items: center;
   color: var(--accent);
-  border: 1px solid var(--rule-bold);
   border-radius: 50%;
   margin-bottom: 22px;
-  background: var(--paper-soft);
+  background:
+    radial-gradient(circle at 50% 38%, var(--paper-card), var(--paper-soft) 70%);
+  box-shadow:
+    inset 0 0 0 1px var(--rule-bold),
+    0 6px 18px -6px var(--accent-glow);
+}
+
+.login-mark::before,
+.login-mark::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-tint);
+  opacity: 0;
+  animation: ripple 2.6s var(--ease) infinite;
+}
+
+.login-mark::after {
+  animation-delay: 1.3s;
+}
+
+@keyframes ripple {
+  0%   { transform: scale(0.85); opacity: 0; }
+  20%  { opacity: 0.9; }
+  100% { transform: scale(1.6);  opacity: 0; }
 }
 
 .login-meta {
@@ -167,34 +268,34 @@ body::before {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-deep);
 }
 
 .login-title {
   font-family: var(--font-sans);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 500;
-  line-height: 1.35;
-  letter-spacing: -0.01em;
+  line-height: 1.32;
+  letter-spacing: -0.015em;
   color: var(--ink);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .login-desc {
   font-size: 12.5px;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--ink-soft);
   max-width: 280px;
-  margin-bottom: 28px;
+  margin-bottom: 30px;
 }
 
 .login-foot {
-  margin-top: 22px;
+  margin-top: 24px;
   font-family: var(--font-mono);
   font-size: 9.5px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--ink-mute);
 }
@@ -203,38 +304,61 @@ body::before {
    Buttons
    ============================================================ */
 .btn-primary {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   width: 100%;
-  max-width: 260px;
-  padding: 12px 18px;
+  max-width: 264px;
+  padding: 13px 20px;
   font-size: 12.5px;
   font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--paper);
-  background: var(--ink);
-  border: 1px solid var(--ink);
+  letter-spacing: 0.04em;
+  color: #FFFFFF;
+  background: linear-gradient(140deg, var(--accent-bright) 0%, var(--accent) 50%, var(--accent-deep) 100%);
+  border: 0;
   border-radius: 999px;
   cursor: pointer;
-  transition: background 160ms var(--ease), color 160ms var(--ease),
-              transform 120ms var(--ease), box-shadow 200ms var(--ease);
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 8px 18px -8px var(--accent-glow);
+  transition: transform 160ms var(--ease),
+              box-shadow 240ms var(--ease),
+              filter 200ms var(--ease);
+}
+
+/* sheen — ガラスの照り */
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0) 40%);
+  opacity: 0.6;
+  transition: opacity 240ms var(--ease);
+  z-index: -1;
 }
 
 .btn-primary svg {
-  transition: transform 160ms var(--ease);
+  transition: transform 200ms var(--ease);
 }
 
 .btn-primary:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  transform: translateY(-1px);
+  filter: saturate(1.1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.28) inset,
+    0 14px 28px -10px var(--accent-glow);
 }
 
-.btn-primary:hover svg { transform: translateX(2px); }
+.btn-primary:hover svg { transform: translateX(3px); }
 
-.btn-primary:active { transform: translateY(1px); }
+.btn-primary:active {
+  transform: translateY(0);
+  filter: saturate(1) brightness(0.97);
+}
 
 .btn-primary:focus-visible {
   outline: 2px solid var(--accent);
@@ -244,36 +368,36 @@ body::before {
 .btn-primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  background: var(--ink-soft);
-  border-color: var(--ink-soft);
+  filter: saturate(0.4);
 }
 
 .btn-icon {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   color: var(--ink-soft);
-  border-radius: 999px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: color 140ms var(--ease), background 140ms var(--ease),
-              transform 200ms var(--ease);
+  transition: color 160ms var(--ease),
+              background 160ms var(--ease),
+              transform 240ms var(--ease);
 }
 
 .btn-icon:hover {
-  color: var(--accent);
+  color: var(--accent-deep);
   background: var(--accent-soft);
 }
 
-.btn-icon:active { transform: scale(0.94); }
+.btn-icon:active { transform: scale(0.92); }
 
 .btn-icon:focus-visible {
   outline: 1.5px solid var(--accent);
   outline-offset: 2px;
 }
 
-#btn-settings:hover svg { transform: rotate(45deg); transition: transform 320ms var(--ease); }
-#btn-settings svg { transition: transform 320ms var(--ease); }
+#btn-settings:hover svg { transform: rotate(60deg); }
+#btn-settings svg { transition: transform 380ms var(--ease); }
 
 .btn-danger {
   display: inline-flex;
@@ -281,16 +405,16 @@ body::before {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 16px;
+  padding: 11px 16px;
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   color: var(--danger);
-  background: transparent;
+  background: var(--paper-card);
   border: 1px solid var(--rule-bold);
   border-radius: 999px;
   cursor: pointer;
-  transition: all 160ms var(--ease);
+  transition: all 200ms var(--ease);
 }
 
 .btn-danger:hover {
@@ -309,11 +433,11 @@ body::before {
   font-size: 11px;
   color: var(--danger);
   font-family: var(--font-mono);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 /* ============================================================
-   Main · Header
+   Main · Header (frosted glass)
    ============================================================ */
 .main-header {
   position: relative;
@@ -321,7 +445,9 @@ body::before {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 14px 16px 12px;
+  padding: 14px 16px 13px;
+  background: linear-gradient(180deg, var(--paper) 60%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .main-header::after {
@@ -331,29 +457,49 @@ body::before {
   right: 16px;
   bottom: 0;
   height: 1px;
-  background: var(--rule);
+  background: linear-gradient(90deg, transparent, var(--rule-bold) 30%, var(--rule-bold) 70%, transparent);
 }
 
 .header-title {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   flex: 1;
   min-width: 0;
 }
 
+/* Header marker — 雨粒 */
 .header-marker {
-  font-family: var(--font-mono);
-  color: var(--accent);
-  font-size: 9px;
-  line-height: 1;
-  transform: translateY(-1px);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  font-size: 0;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  position: relative;
+}
+
+.header-marker::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid var(--accent-tint);
+  animation: marker-pulse 2.4s var(--ease) infinite;
+  opacity: 0;
+}
+
+@keyframes marker-pulse {
+  0%   { transform: scale(0.8); opacity: 0; }
+  30%  { opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
 }
 
 .collection-name {
   font-size: 15px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.005em;
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -361,20 +507,33 @@ body::before {
 }
 
 /* ============================================================
-   Search bar
+   Search bar — Glass capsule
    ============================================================ */
 .search-bar {
   position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 18px 12px;
+  margin: 12px 14px 8px;
+  padding: 9px 14px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  transition: border-color 200ms var(--ease),
+              box-shadow 200ms var(--ease),
+              background 200ms var(--ease);
+}
+
+.search-bar:focus-within {
+  border-color: var(--accent-tint);
+  box-shadow: var(--shadow-glow);
+  background: var(--paper-card);
 }
 
 .search-icon {
   color: var(--ink-mute);
   flex-shrink: 0;
-  transition: color 160ms var(--ease);
+  transition: color 200ms var(--ease);
 }
 
 .search-bar:focus-within .search-icon { color: var(--accent); }
@@ -382,7 +541,7 @@ body::before {
 #search-input {
   flex: 1;
   min-width: 0;
-  padding: 4px 0;
+  padding: 2px 0;
   font-family: var(--font-sans);
   font-size: 13px;
   color: var(--ink);
@@ -394,7 +553,8 @@ body::before {
 
 #search-input::placeholder {
   color: var(--ink-mute);
-  font-style: italic;
+  font-style: normal;
+  letter-spacing: 0.04em;
 }
 
 #search-input::-webkit-search-cancel-button { display: none; }
@@ -405,7 +565,8 @@ body::before {
   font-weight: 500;
   color: var(--ink-mute);
   padding: 2px 7px;
-  border: 1px solid var(--rule-bold);
+  background: var(--paper-soft);
+  border: 1px solid var(--rule);
   border-radius: 4px;
   letter-spacing: 0.05em;
 }
@@ -417,7 +578,8 @@ body::before {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px 0 12px;
+  padding: 4px 8px 12px;
+  margin-top: 4px;
 }
 
 .bookmark-list { list-style: none; }
@@ -427,50 +589,64 @@ body::before {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 18px;
+  padding: 10px 14px;
+  margin: 1px 0;
+  border-radius: var(--r-sm);
   cursor: pointer;
-  min-height: 40px;
-  transition: background 140ms var(--ease), padding 200ms var(--ease);
+  min-height: 42px;
+  transition: background 180ms var(--ease),
+              transform 200ms var(--ease);
   --i: 0;
-  animation: item-in 360ms var(--ease) both;
-  animation-delay: calc(var(--i) * 14ms);
+  animation: item-in 480ms var(--ease-rain) both;
+  animation-delay: calc(var(--i) * 18ms);
 }
 
-/* キャッシュ→差分更新の二重フェードイン抑制用 (popup.js が付与) */
 .bookmark-item.no-anim { animation: none; }
 
+/* item-in — 雨粒のように上から落ちて止まる */
 @keyframes item-in {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: translateY(0); }
+  0%   { opacity: 0; transform: translateY(-6px); }
+  60%  { opacity: 1; transform: translateY(1px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
+/* hover の縦バー — 雨粒が伸びるイメージ */
 .bookmark-item::before {
   content: "";
   position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: var(--accent);
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: transform 220ms var(--ease);
+  left: 4px;
+  top: 50%;
+  width: 3px;
+  height: 0;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent-deep));
+  border-radius: 999px;
+  transform: translateY(-50%);
+  transition: height 260ms var(--ease-rain),
+              opacity 200ms var(--ease);
+  opacity: 0;
 }
 
 .bookmark-item:hover {
-  background: var(--accent-soft);
+  background: linear-gradient(90deg, var(--accent-soft), transparent 80%);
 }
 
-.bookmark-item:hover::before { transform: scaleY(1); }
+.bookmark-item:hover::before {
+  height: 60%;
+  opacity: 1;
+}
 
-.bookmark-item:active { background: var(--accent-tint); }
+.bookmark-item:active {
+  background: var(--accent-tint);
+  transform: scale(0.995);
+}
 
 .bookmark-favicon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  border-radius: 3px;
+  border-radius: 5px;
   background: var(--paper-soft);
+  box-shadow: 0 0 0 1px var(--rule);
 }
 
 .bookmark-title {
@@ -494,8 +670,10 @@ body::before {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
 }
+
+.bookmark-item:hover .bookmark-domain { color: var(--accent-deep); }
 
 /* ============================================================
    Loading & Empty states
@@ -504,37 +682,40 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   padding: 22px 16px;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--ink-mute);
 }
 
 .loading[hidden] { display: none; }
 
+/* Pulse dot — 雨粒の波紋 */
 .pulse-dot {
-  width: 6px;
-  height: 6px;
+  position: relative;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--accent);
-  animation: pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 0 0 0 var(--accent-glow);
+  animation: drop-pulse 1.6s var(--ease) infinite;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 0.25; transform: scale(0.8); }
-  50%      { opacity: 1;    transform: scale(1.1); }
+@keyframes drop-pulse {
+  0%   { transform: scale(0.85); box-shadow: 0 0 0 0 var(--accent-glow); }
+  60%  { transform: scale(1.0);  box-shadow: 0 0 0 8px transparent; }
+  100% { transform: scale(0.85); box-shadow: 0 0 0 0 transparent; }
 }
 
 .empty-message {
-  padding: 56px 24px;
+  padding: 64px 24px;
   font-size: 12.5px;
-  font-style: italic;
   color: var(--ink-mute);
   text-align: center;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.04em;
 }
 
 /* ============================================================
@@ -545,7 +726,9 @@ body::before {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 16px 12px;
+  padding: 14px 16px 13px;
+  background: linear-gradient(180deg, var(--paper) 60%, transparent);
+  backdrop-filter: blur(8px);
 }
 
 .settings-header::after {
@@ -555,18 +738,18 @@ body::before {
   right: 16px;
   bottom: 0;
   height: 1px;
-  background: var(--rule);
+  background: linear-gradient(90deg, transparent, var(--rule-bold) 30%, var(--rule-bold) 70%, transparent);
 }
 
 .settings-title {
   font-size: 14px;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
   color: var(--ink);
   flex: 1;
 }
 
-.settings-spacer { width: 30px; }
+.settings-spacer { width: 32px; }
 
 .settings-body {
   flex: 1;
@@ -587,16 +770,16 @@ body::before {
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 500;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--ink-mute);
-  margin-bottom: 10px;
+  color: var(--accent-deep);
+  margin-bottom: 12px;
 }
 
 .section-rule {
   flex: 1;
   height: 1px;
-  background: var(--rule);
+  background: linear-gradient(90deg, var(--rule-bold), transparent);
 }
 
 /* ---------- Collection tree ---------- */
@@ -604,19 +787,22 @@ body::before {
   max-height: 240px;
   overflow-y: auto;
   border: 1px solid var(--rule);
-  border-radius: 8px;
-  background: var(--paper-soft);
+  border-radius: var(--r-md);
+  background: var(--paper-card);
+  box-shadow: var(--shadow-soft);
 }
 
 .collection-item {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 9px 14px;
+  padding: 10px 14px;
   font-size: 12.5px;
   color: var(--ink);
   cursor: pointer;
-  transition: background 140ms var(--ease), color 140ms var(--ease);
+  transition: background 160ms var(--ease),
+              color 160ms var(--ease),
+              padding-left 200ms var(--ease);
 }
 
 .collection-item + .collection-item {
@@ -625,23 +811,25 @@ body::before {
 
 .collection-item:hover {
   background: var(--accent-soft);
+  padding-left: 18px;
 }
 
 .collection-item.selected {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--accent-deep);
+  background: linear-gradient(90deg, var(--accent-tint) 0%, var(--accent-soft) 100%);
   font-weight: 500;
 }
 
 .collection-item.selected::before {
-  content: "○";
+  content: "";
   position: absolute;
   left: 4px;
-  font-family: var(--font-mono);
-  font-size: 8px;
-  color: var(--accent);
   top: 50%;
   transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent-deep));
 }
 
 .collection-item .indent {
@@ -656,19 +844,20 @@ body::before {
   font-size: 10px;
   color: var(--ink-mute);
   padding-left: 10px;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
-.collection-item.selected .collection-count { color: var(--accent); }
+.collection-item.selected .collection-count { color: var(--accent-deep); }
 
 /* ---------- Segmented control ---------- */
 .segmented {
   display: flex;
-  gap: 0;
-  padding: 2px;
+  gap: 2px;
+  padding: 3px;
   background: var(--paper-soft);
   border: 1px solid var(--rule);
   border-radius: 999px;
+  box-shadow: inset 0 1px 2px rgba(27, 39, 56, 0.04);
 }
 
 .theme-btn,
@@ -678,13 +867,15 @@ body::before {
   font-family: var(--font-sans);
   font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   color: var(--ink-soft);
   background: transparent;
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  transition: color 160ms var(--ease), background 200ms var(--ease);
+  transition: color 200ms var(--ease),
+              background 280ms var(--ease-rain),
+              box-shadow 240ms var(--ease);
 }
 
 .theme-btn:hover,
@@ -694,8 +885,11 @@ body::before {
 
 .theme-btn.selected,
 .link-mode-btn.selected {
-  color: var(--paper);
-  background: var(--ink);
+  color: #FFFFFF;
+  background: linear-gradient(140deg, var(--accent-bright), var(--accent), var(--accent-deep));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.22) inset,
+    0 4px 12px -4px var(--accent-glow);
 }
 
 .theme-btn:focus-visible,
@@ -707,15 +901,19 @@ body::before {
 /* ============================================================
    Scrollbar
    ============================================================ */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: var(--rule-bold);
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   background-clip: padding-box;
   border-radius: 999px;
+  transition: background 200ms var(--ease);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--ink-mute); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+  background-clip: padding-box;
+}
 
 /* ============================================================
    Reduced motion
