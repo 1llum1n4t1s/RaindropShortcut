@@ -1,4 +1,8 @@
-importScripts("/src/lib/actions.js");
+// Chrome (Service Worker) では importScripts でロード、Firefox (event page) では
+// manifest.json の background.scripts に列挙して先にロード済みなので skip する。
+if (typeof importScripts === "function") {
+  importScripts("/src/lib/actions.js");
+}
 
 // ========== OAuth / API \u8a2d\u5b9a (background \u5c02\u7528) ==========
 // \u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u8a8d\u8a3c\u60c5\u5831\u306f popup \u5074\u304c\u53c2\u7167\u3057\u306a\u3044\u3088\u3046 background.js \u5185\u306b\u5206\u96e2\u3002

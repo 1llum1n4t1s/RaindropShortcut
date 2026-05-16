@@ -5,8 +5,14 @@ temp-build/
 *.zip
 raindrop-shortcut/
 
+# Firefox AMO 公開関連 (ビルド生成物)
+firefox-build/
+web-ext-artifacts/
+*.xpi
+
 # エディタ・ツールのローカルデータ
 .serena/
+.claude/
 .vscode/
 .idea/
 

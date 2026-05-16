@@ -3,7 +3,7 @@
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAthOazyVjsmD73PZOA5rUxh2XxWiPDl+LoNqog8xGVMfKCt26zisB4YZGaUtGV6w60Ev2qYh3zMSgn+B50bEmFewu++1J3x8A4zbJ0TTlpFHMqQqNDCYGk0S+5lGZ1YIzyh5ybRq4G9RLtEsv2dhUzGbiIt85gsVFwDt3jXZolEwfLfaoifiJqAEYwlFjySoIHseYUfvswqnplPP87EH3cg9SZS+evjmP1g+VY3LlBcwqUzxFE8i4GxlJDK5XMNB/t77Gf6W+lEQ6gwonsezCAIjJ16kCRtTZHNEHLdDrXZ9t+5mJyxR7v/BRm/wLvzsTmLcuyUvUS4oTh41WGl1jzQIDAQAB",
   "name": "Raindrop Shortcuts",
   "description": "Raindrop.io のブックマークをすばやく検索・アクセスできる拡張機能",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "action": {
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -19,7 +19,11 @@
     "128": "icons/icon-128.png"
   },
   "background": {
-    "service_worker": "src/background/background.js"
+    "service_worker": "src/background/background.js",
+    "scripts": [
+      "src/lib/actions.js",
+      "src/background/background.js"
+    ]
   },
   "permissions": [
     "identity",
@@ -28,5 +32,14 @@
   "host_permissions": [
     "https://api.raindrop.io/*",
     "https://raindrop.io/*"
-  ]
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{37d6aac9-e947-4a4b-982d-f9945e41b234}",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
 }

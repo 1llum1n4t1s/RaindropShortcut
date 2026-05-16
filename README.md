@@ -4,7 +4,7 @@
   <img src="icons/icon.svg" width="128" height="128" alt="Raindrop Shortcut">
 </p>
 
-Raindrop.io のブックマークをツールバーからすばやく検索・アクセスできる Chrome 拡張機能です。
+Raindrop.io のブックマークをツールバーからすばやく検索・アクセスできる Chrome / Firefox 拡張機能 (Manifest V3) です。
 
 ## 機能
 
@@ -17,7 +17,8 @@ Raindrop.io のブックマークをツールバーからすばやく検索・�
 
 ## インストール
 
-Chrome Web Store からインストールできます（公開後リンク掲載予定）。
+- **Chrome Web Store**: 公開済（リンクは Web Store 公開ページを参照）
+- **Firefox Add-ons (AMO)**: [raindrop-shortcuts](https://addons.mozilla.org/firefox/addon/raindrop-shortcuts/) （レビュー後に公開）
 
 ## 使い方
 

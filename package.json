@@ -1,6 +1,6 @@
 {
   "name": "raindrop-shortcut",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "type": "commonjs",
   "description": "Chrome extension to quickly access Raindrop.io bookmarks",
   "scripts": {
@@ -11,7 +11,8 @@
   "devDependencies": {
     "chrome-webstore-upload-cli": "^3.3.2",
     "puppeteer": "^24.37.5",
-    "sharp": "^0.33.0"
+    "sharp": "^0.33.0",
+    "web-ext": "^10.1.0"
   },
   "keywords": [
     "chrome-extension",
