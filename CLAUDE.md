@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Raindrop Shortcut は Chrome 拡張機能 (Manifest V3)。Raindrop.io の特定コレクション内ブックマークをワンクリックで一覧表示する。OAuth 2.0 認証、コレクション選択、ローカル検索フィルタ、ダークモード、リンク開き方選択、ローカルキャッシュによる高速表示に対応。UI は日本語。
+Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io の特定コレクション内ブックマークをワンクリックで一覧表示する。OAuth 2.0 認証、コレクション選択、ローカル検索フィルタ、ダークモード、リンク開き方選択、ローカルキャッシュによる高速表示に対応。UI は日本語。単一の `manifest.json` で Chrome (Service Worker) / Firefox 128+ (event page) 両方をサポートする。
 
 ## Build Commands
 
@@ -30,10 +30,14 @@ src/
 ├── background/         # Service Worker (background.js) — OAuth 認証情報を保持
 └── lib/                # 共有定数 (actions.js) — popup / background 両方から読み込む
 icons/                  # 拡張機能アイコン (SVG 原本 + 生成 PNG)
-webstore/               # Chrome Web Store 掲載画像テンプレート + 掲載文言
+webstore/               # Chrome Web Store / Firefox AMO 掲載画像テンプレート + 掲載文言
 docs/                   # privacy-policy.md など
-scripts/                # 開発用スクリプト (generate-icons.js)
-.github/workflows/      # publish.yml (Chrome Web Store 自動公開)
+scripts/                # 開発用スクリプト
+  ├── generate-icons.js          # icons/icon.svg → PNG (sharp)
+  ├── amo-metadata-update.js     # AMO API v5 で name/summary/description/privacy_policy を一括 PATCH
+  └── amo-previews-upload.js     # AMO previews multipart upload (rate limit 重く実用は Dev Hub 手動)
+.github/workflows/      # publish.yml (Chrome Web Store 専用、 Firefox AMO は手動)
+.amo-metadata.json      # AMO 提出時の categories + version.license (web-ext sign が読む)
 ```
 
 `src/lib/actions.js` は popup の `<script>` タグと background の `importScripts()` の双方から読まれる前提で、モジュール構文を使わずグローバル定数 (`Actions`, `StorageKeys`, `SharedConfig`, `TokenStorageKeys`, `LinkOpenMode`, `ThemeMode`, `Screens`) を `Object.freeze` で定義する。ES module 化しないこと。
@@ -54,7 +58,9 @@ popup.js ──msg──▶ background.js (Service Worker)
 
 src/lib/actions.js = 共有定数
   - popup.html が <script src="../lib/actions.js"> で読み込む
-  - background.js が importScripts("/src/lib/actions.js") で読み込む
+  - Chrome (Service Worker) は background.js 内の importScripts() で読み込む
+  - Firefox (event page) は manifest.json の background.scripts 列挙で先にロードされるので
+    background.js は importScripts を `typeof importScripts === "function"` で guard して skip する
 ```
 
 ### メッセージフロー
@@ -115,9 +121,64 @@ chrome.storage.local:
 - **favicon は Google Favicon Service** — `FAVICON_SIZE` 定数で URL と DOM 属性を一元化。プライバシーポリシーに開示済。
 - **zip.ps1 / zip.sh の除外ルール** — `scripts/` (開発専用)、`node_modules`、`webstore`、`package*.json`、`icons/icon.svg` (原本) を除外。
 
+## Cross-Browser (Chrome / Firefox 両対応)
+
+単一 `manifest.json` で両ブラウザ対応するために以下を併記している。 Chrome は Firefox 固有フィールドを silently ignore する。
+
+- **`browser_specific_settings.gecko`** — Firefox 用 extension id (`{37d6aac9-e947-4a4b-982d-f9945e41b234}`) と `strict_min_version: "128.0"`、 `data_collection_permissions.required: ["none"]` を保持。
+- **`background.service_worker` + `background.scripts` 併記** — Chrome は `service_worker` を SW として、 Firefox は `scripts` 配列を event page として読む。 AMO validator は `service_worker` 単独を reject する (`"Unsupported /background/service_worker manifest property used without /background/scripts property as Firefox-compatible fallback"`)。 `scripts` 配列の先頭に `src/lib/actions.js` を置くことで `TokenStorageKeys` 等のグローバルが evaluation 順で先に定義される。
+- **`importScripts` の typeof guard** — `worker` 限定 API なので Firefox event page では `ReferenceError`。 `background.js` 先頭で `typeof importScripts === "function"` で囲む。
+- **`manifest.json` の `key` フィールド** — Chrome ローカル開発用の公開鍵。 Firefox AMO は無視するが、 配布物には不要なので `zip.ps1` / `zip.sh` と firefox-build/ 構築時に削除する。
+
+## Firefox AMO 公開フロー (手動)
+
+`.github/workflows/publish.yml` は Chrome Web Store 専用なので、 AMO への新バージョン提出はローカルで手動実行する。 初回登録時の guid は `manifest.json` の `gecko.id` を使って `web-ext sign` が AMO 上に自動作成する。
+
+```powershell
+# 1. firefox-build/ を構築 (key を除いた manifest + icons PNG + src/)
+$dir = "firefox-build"
+Remove-Item $dir -Recurse -Force -EA SilentlyContinue
+New-Item -ItemType Directory $dir | Out-Null
+node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
+New-Item -ItemType Directory "$dir/icons" | Out-Null
+Copy-Item "icons/icon-16.png","icons/icon-48.png","icons/icon-128.png" -Destination "$dir/icons/"
+Copy-Item "src" -Destination $dir -Recurse
+Get-ChildItem $dir -Recurse -Include "*.DS_Store","*.swp","*~","preview.html","*.ttf" | Remove-Item -Force
+
+# 2. web-ext sign で AMO submission API 経由 upload
+$env:WEB_EXT_API_KEY = "user:..."
+$env:WEB_EXT_API_SECRET = "..."
+npx --no web-ext sign --source-dir=firefox-build --artifacts-dir=web-ext-artifacts `
+  --channel=listed --amo-metadata=.amo-metadata.json --no-input
+```
+
+- `.amo-metadata.json` の `license` は **`version.license` (nested)** で渡す (top-level だと "This field, or custom_license, is required for listed versions." エラー)
+- `web-ext sign` が `Approval: timeout exceeded` と表示しても submission は受理済 (エラーメッセージに含まれる `/versions/<id>` URL がそれ)
+
+### AMO API v5 でリスティング情報を反映 (`scripts/amo-metadata-update.js`)
+
+JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Authorization: JWT <token>` を付けて API v5 を叩くと、 name / summary / description / homepage / support_url / privacy_policy をスクリプトから一括反映できる。
+
+- **`PATCH /api/v5/addons/addon/{guid}/`** — name / summary / description / homepage / support_url / default_locale
+- **`PATCH /api/v5/addons/addon/{guid}/eula_policy/`** — privacy_policy ⭐ **専用エンドポイント必須**。 `/addon/` 本体への PATCH で privacy_policy を渡しても HTTP 200 が返るが `has_privacy_policy` フラグは立たない (ReplaceFontSelect notosans でも踏んだ既知問題、 v1.0.11 で `/eula_policy/` 経由に切替て解決)
+- `description` は markdown 対応 (`### 見出し` `- リスト` `**強調**` `[リンク](URL)` が `<h3>` `<ul><li>` `<strong>` `<a>` に展開、 外部リンクは Mozilla outgoing proxy 経由に書き換わる)。 summary は plain text のみ
+- locale コードは BCP 47 厳密 (`en` 単独は HTTP 400、 `en-US` を使う)。 `default_locale` を `"ja"` に切り替える PATCH は同じ body に `name: {ja: "..."}` を含めないと "A value in the default locale of \"ja\" is required." エラー
+
+### previews / screenshots (`scripts/amo-previews-upload.js`)
+
+`POST /api/v5/addons/addon/{guid}/previews/` (multipart/form-data: `image` + `position`) で screenshots を upload できる、 が **DELETE / POST の user-level rate limit が非常に重い** (1 回叩いただけで 3474 秒 wait、 連投で 53000 秒級まで伸びた事例あり)。 **実運用は AMO Developer Hub からの手動 upload 推奨**。 スクリプトは `--check` モードで既存 previews の `image_url` / `position` 一覧取得のみ実用。
+
+### HTTP 429 リトライ
+
+両スクリプトとも `detail` の `"Expected available in N seconds"` を正規表現で parse して自動 sleep + 5 回リトライ。 ただし上記の通り **previews 系は累積で 1 時間超の wait に伸びる** ため、 自動リトライは無力。
+
 ## CI / Release
 
-`.github/workflows/publish.yml` が Chrome Web Store への自動公開ワークフロー。バージョン更新時は `manifest.json` と `package.json` の `version` を両方揃えて更新する。外部 action は SHA 固定、`chrome-webstore-upload-cli` は devDependencies に固定して `npx` 経由で実行する。
+`.github/workflows/publish.yml` は **Chrome Web Store 専用** の自動公開ワークフロー。 `release/<X.Y.Z>` push でトリガー。 外部 action は SHA 固定、 `chrome-webstore-upload-cli` は devDependencies に exact pin して `npx --no` 経由で実行する (サプライチェーン対策)。
+
+バージョン更新は `manifest.json` を Edit で書き換え、 `package.json` / `package-lock.json` は `npm version <X.Y.Z> --no-git-tag-version` で同期。 `/vava` スキルが一括バンプ + release ブランチ作成 + 古いブランチ掃除まで自動化する (PRIMARY_VERSION_FILE = manifest.json、 SECONDARY = package.json/package-lock.json)。
+
+**Firefox AMO は CI 未対応** で手動 `web-ext sign` が必要 (上記「Firefox AMO 公開フロー」)。 publish.yml を AMO 対応に拡張する場合は ReplaceFontSelect (`C:\Users\szk\Work\ReplaceFontSelect`) の matrix strategy + 後続 step に `if: ${{ success() || failure() }}` を明示する連鎖 skip 解除パターンを移植する。
 
 ## Setup
 
@@ -125,4 +186,5 @@ chrome.storage.local:
 2. `chrome.identity.getRedirectURL()` の値をリダイレクト URI に登録
 3. `src/background/background.js` の `OAuthConfig` の `CLIENT_ID` / `CLIENT_SECRET` を設定
 4. `npm install && npm run build` でアイコン・ストア画像生成
-5. `chrome://extensions` で開発者モード → パッケージ化されていない拡張機能を読み込む
+5. **Chrome**: `chrome://extensions` で開発者モード → パッケージ化されていない拡張機能を読み込む
+6. **Firefox 128+**: `about:debugging#/runtime/this-firefox` → 「一時的なアドオンを読み込む...」 → `manifest.json` を選択 (再起動で消えるのは仕様)
