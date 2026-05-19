@@ -12,7 +12,7 @@
     "chrome-webstore-upload-cli": "^3.3.2",
     "puppeteer": "^24.37.5",
     "sharp": "^0.33.0",
-    "web-ext": "^10.1.0"
+    "web-ext": "10.1.0"
   },
   "keywords": [
     "chrome-extension",

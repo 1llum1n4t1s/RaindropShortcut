@@ -1,4 +1,4 @@
-name: Publish to Chrome Web Store
+name: Publish to Stores
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  chrome:
     name: Chrome Web Store 公開
     runs-on: ubuntu-latest
     steps:
@@ -79,3 +79,70 @@ jobs:
             --refresh-token "$CWS_REFRESH_TOKEN" \
             --auto-publish
           echo "🎉 Chrome Web Store への公開リクエストを送信したよ〜"
+
+  firefox:
+    name: Firefox AMO 公開
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリをチェックアウト
+        # actions/checkout v5.0.0 (commit SHA で固定)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: バージョンを取得
+        id: version
+        run: |
+          version=$(grep -oP '(?<="version": ")[^"]+' manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "📦 公開対象バージョン: $version"
+
+      - name: ブランチ名とバージョンの整合性を確認
+        env:
+          BRANCH_VERSION: ${{ github.ref_name }}
+          MANIFEST_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          expected="release/${MANIFEST_VERSION}"
+          if [ "$BRANCH_VERSION" != "$expected" ]; then
+            echo "::error::ブランチ名 ($BRANCH_VERSION) と manifest.json のバージョン ($MANIFEST_VERSION) が一致しません。期待値: $expected"
+            exit 1
+          fi
+          echo "✅ ブランチ名と manifest バージョン一致: $expected"
+
+      - name: Node セットアップ
+        # actions/setup-node v5 (commit SHA で固定)
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 依存インストール
+        run: npm ci
+
+      - name: アイコン生成
+        run: node scripts/generate-icons.js
+
+      - name: firefox-build/ を構築
+        run: |
+          # Chrome ローカル開発専用の key フィールドを除去 (AMO は無視するが配布物には不要)
+          mkdir -p firefox-build/icons
+          node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
+          cp icons/icon-16.png icons/icon-48.png icons/icon-128.png firefox-build/icons/
+          cp -r src firefox-build/
+          find firefox-build \( -name "*.DS_Store" -o -name "*.swp" -o -name "*~" \) -delete
+          ls -la firefox-build
+
+      - name: AMO へ submission
+        # web-ext は devDep に exact pin (package.json で固定)。supply chain 対策で npx --no-install。
+        # --approval-timeout=0: submission 受理直後に exit (AMO 側の signing 完了は待たない、配信は Mozilla 自動)。
+        # 同 version 重複 push 時は AMO 側で reject される (新バージョンのみ submission 可)。
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: |
+          npx --no-install web-ext sign \
+            --source-dir=firefox-build \
+            --artifacts-dir=web-ext-artifacts \
+            --channel=listed \
+            --amo-metadata=.amo-metadata.json \
+            --no-input \
+            --approval-timeout=0
+          echo "🦊 Firefox AMO への submission を送信したよ〜"
