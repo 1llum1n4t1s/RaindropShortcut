@@ -11,11 +11,30 @@ const OAuthConfig = Object.freeze({
   BASE_URL: "https://api.raindrop.io",
   AUTH_URL: "https://raindrop.io/oauth/authorize",
   TOKEN_URL: "https://raindrop.io/oauth/access_token",
-  CLIENT_ID: "69e39b56c5bf5a0ca8930817",
-  CLIENT_SECRET: "1d28d852-be1d-4e6c-92a0-5caa49f59f87",
   REFRESH_THRESHOLD_MS: 5 * 60 * 1000,
   FETCH_TIMEOUT_MS: 15_000,
 });
+
+// Chrome \u3068 Firefox \u3067\u306f chrome.identity.getRedirectURL() \u306e\u623b\u308a\u5024\u30c9\u30e1\u30a4\u30f3\u304c\u7570\u306a\u308a
+// (Chrome: <id>.chromiumapp.org / Firefox: <sha1>.extensions.allizom.org)\u3001Raindrop.io \u304c
+// 1 \u30a2\u30d7\u30ea 1 redirect URI \u4ed5\u69d8\u306e\u305f\u3081\u3001\u305d\u308c\u305e\u308c\u5225\u306e OAuth \u30a2\u30d7\u30ea\u3092\u767b\u9332\u3057\u3066\u4f7f\u3044\u5206\u3051\u308b\u3002
+const OAuthClients = Object.freeze({
+  chrome: {
+    CLIENT_ID: "6a0c8f9f9a8b8816ae48158a",
+    CLIENT_SECRET: "69a49702-ec6e-4f0e-8b76-0759968fc7d9",
+  },
+  firefox: {
+    CLIENT_ID: "6a0c8e2ad7332457d8cfa30d",
+    CLIENT_SECRET: "150f6fb4-10da-4100-a8b6-58ad4def3ec3",
+  },
+});
+
+function getOAuthClient() {
+  const redirectUri = chrome.identity.getRedirectURL();
+  return redirectUri.endsWith(".chromiumapp.org/")
+    ? OAuthClients.chrome
+    : OAuthClients.firefox;
+}
 
 const collator = new Intl.Collator("ja");
 
@@ -63,8 +82,8 @@ async function refreshAccessToken(refreshToken) {
       body: JSON.stringify({
         grant_type: "refresh_token",
         refresh_token: refreshToken,
-        client_id: OAuthConfig.CLIENT_ID,
-        client_secret: OAuthConfig.CLIENT_SECRET,
+        client_id: getOAuthClient().CLIENT_ID,
+        client_secret: getOAuthClient().CLIENT_SECRET,
       }),
     });
 
@@ -114,9 +133,10 @@ function randomState() {
 
 async function handleLogin() {
   const redirectUri = chrome.identity.getRedirectURL();
+  const { CLIENT_ID, CLIENT_SECRET } = getOAuthClient();
   const state = randomState();
   const authUrl =
-    `${OAuthConfig.AUTH_URL}?client_id=${OAuthConfig.CLIENT_ID}` +
+    `${OAuthConfig.AUTH_URL}?client_id=${CLIENT_ID}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&response_type=code` +
     `&state=${state}`;
@@ -150,8 +170,8 @@ async function handleLogin() {
     body: JSON.stringify({
       grant_type: "authorization_code",
       code,
-      client_id: OAuthConfig.CLIENT_ID,
-      client_secret: OAuthConfig.CLIENT_SECRET,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
       redirect_uri: redirectUri,
     }),
   });
