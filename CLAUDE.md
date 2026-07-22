@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code and other coding agents working in this repository.
 
 ## Project Overview
 
@@ -9,9 +9,9 @@ Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io 
 ## Build Commands
 
 ```bash
-npm run build                  # アイコン PNG + ストア画像を一括生成
-npm run generate-icons         # icons/icon.svg → icons/icon-{16,48,128}.png (sharp)
-npm run generate-screenshots   # webstore/0x-*.html → webstore/images/*.png (puppeteer)
+pnpm run build                 # アイコン PNG + ストア画像を一括生成
+pnpm run generate-icons        # icons/icon.svg → icons/icon-{16,48,128}.png (sharp)
+pnpm run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (puppeteer)
 ```
 
 パッケージ作成:
@@ -40,9 +40,9 @@ scripts/                # 開発用スクリプト
 .amo-metadata.json      # AMO 提出時の categories + version.license (web-ext sign が読む)
 ```
 
-`src/lib/actions.js` は popup の `<script>` タグと background の `importScripts()` の双方から読まれる前提で、モジュール構文を使わずグローバル定数 (`Actions`, `StorageKeys`, `SharedConfig`, `TokenStorageKeys`, `LinkOpenMode`, `ThemeMode`, `Screens`) を `Object.freeze` で定義する。ES module 化しないこと。
+`src/lib/actions.js` は popup の `<script>` タグと background の `importScripts()` の双方から読まれる前提で、モジュール構文を使わずグローバル定数 (`Actions`, `StorageKeys`, `SharedConfig`, `TokenStorageKeys`, `LinkOpenMode`, `ThemeMode`, `Screens`) を `Object.freeze` で定義する。この従来スクリプト形式を維持し、ES module 化はしない。
 
-**OAuth 認証情報 (CLIENT_ID / CLIENT_SECRET / エンドポイント URL 等) は `src/background/background.js` 内の `OAuthConfig` で保持**し、popup 側には露出させない。ただし Chrome 拡張の配布 ZIP は公開されるため client_secret は構造的に漏洩する。Raindrop.io が PKCE を提供していないことによる既知の制約。
+**OAuth 認証情報 (CLIENT_ID / CLIENT_SECRET / エンドポイント URL 等) は `src/background/background.js` 内の `OAuthConfig` で保持**し、popup 側は sendMessage 経由で間接利用する（認証情報を popup に露出させない）。ただし Chrome 拡張の配布 ZIP は公開されるため client_secret は構造的に漏洩する。Raindrop.io が PKCE を提供していないことによる既知の制約。
 
 **`manifest.json` の `key` フィールドは拡張機能の公開鍵** (Chrome Web Store が署名に使うものを埋め込み済)。これによりローカル読み込み時の Extension ID が本番 (`jdehenbjjipaibjccdblhdhffmlggdnp`) と一致し、`chrome.identity.getRedirectURL()` の値も一致する → Raindrop.io に redirect URI を二重登録する必要がない。公開鍵なので漏洩リスクはない。ストアへのアップロード時は `zip.ps1` / `zip.sh` / `publish.yml` が manifest から `key` を除去する (ストア側が署名鍵を管理するため実質不要)。
 
@@ -73,7 +73,7 @@ src/lib/actions.js = 共有定数
 | `GET_COLLECTIONS` | popup→bg | コレクション一覧取得 (ルート + 子ツリー) |
 | `GET_BOOKMARKS` | popup→bg | ブックマーク取得 (ページ指定、count 付きで返却) |
 
-`onMessage` リスナーは `sender.id !== chrome.runtime.id` のメッセージを無視する (外部拡張からのセッション破壊防止)。
+`onMessage` リスナーは `sender.id === chrome.runtime.id` のメッセージのみ処理し、それ以外（外部拡張からのメッセージ）は無視する (セッション破壊防止)。
 
 ### Popup
 3画面構成 (ログイン / メイン / 設定)。画面切替は各 `<div class="screen">` の `hidden` 属性を切り替えるだけ。メイン画面はヘッダー、検索バー、ブックマーク一覧。クリックで設定に応じて新しいタブ / 現在のタブで開く。
@@ -127,7 +127,7 @@ chrome.storage.local:
 
 - **`browser_specific_settings.gecko`** — Firefox 用 extension id (`{37d6aac9-e947-4a4b-982d-f9945e41b234}`) と `strict_min_version: "128.0"`、 `data_collection_permissions.required: ["none"]` を保持。
 - **`background.service_worker` + `background.scripts` 併記** — Chrome は `service_worker` を SW として、 Firefox は `scripts` 配列を event page として読む。 AMO validator は `service_worker` 単独を reject する (`"Unsupported /background/service_worker manifest property used without /background/scripts property as Firefox-compatible fallback"`)。 `scripts` 配列の先頭に `src/lib/actions.js` を置くことで `TokenStorageKeys` 等のグローバルが evaluation 順で先に定義される。
-- **`importScripts` の typeof guard** — `worker` 限定 API なので Firefox event page では `ReferenceError`。 `background.js` 先頭で `typeof importScripts === "function"` で囲む。
+- **`importScripts` の typeof guard** — `worker` 限定 API なので Firefox event page では `ReferenceError` になる。 `background.js` 先頭で `typeof importScripts === "function"` で囲み、worker のときだけ呼ぶ。
 - **`manifest.json` の `key` フィールド** — Chrome ローカル開発用の公開鍵。 Firefox AMO は無視するが、 配布物には不要なので `zip.ps1` / `zip.sh` と firefox-build/ 構築時に削除する。
 
 ## Firefox AMO 公開フロー (手動)
@@ -148,7 +148,7 @@ Get-ChildItem $dir -Recurse -Include "*.DS_Store","*.swp","*~","preview.html","*
 # 2. web-ext sign で AMO submission API 経由 upload
 $env:WEB_EXT_API_KEY = "user:..."
 $env:WEB_EXT_API_SECRET = "..."
-npx --no web-ext sign --source-dir=firefox-build --artifacts-dir=web-ext-artifacts `
+pnpm exec web-ext sign --source-dir=firefox-build --artifacts-dir=web-ext-artifacts `
   --channel=listed --amo-metadata=.amo-metadata.json --no-input
 ```
 
@@ -174,9 +174,9 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 
 ## CI / Release
 
-`.github/workflows/publish.yml` は **Chrome Web Store 専用** の自動公開ワークフロー。 `release/<X.Y.Z>` push でトリガー。 外部 action は SHA 固定、 `chrome-webstore-upload-cli` は devDependencies に exact pin して `npx --no` 経由で実行する (サプライチェーン対策)。
+`.github/workflows/publish.yml` は **Chrome Web Store 専用** の自動公開ワークフロー。 `release/<X.Y.Z>` push でトリガー。 外部 action は SHA 固定、 `chrome-webstore-upload-cli` は devDependencies に exact pin して `pnpm exec` 経由で実行する (サプライチェーン対策)。
 
-バージョン更新は `manifest.json` を Edit で書き換え、 `package.json` / `package-lock.json` は `npm version <X.Y.Z> --no-git-tag-version` で同期。 `/vava` スキルが一括バンプ + release ブランチ作成 + 古いブランチ掃除まで自動化する (PRIMARY_VERSION_FILE = manifest.json、 SECONDARY = package.json/package-lock.json)。
+バージョン更新は `manifest.json` を Edit で書き換え、 `package.json` / `pnpm-lock.yaml` は `pnpm version <X.Y.Z> --no-git-tag-version` で同期。 `/vava` スキルが一括バンプ + release ブランチ作成 + 古いブランチ掃除まで自動化する (PRIMARY_VERSION_FILE = manifest.json、 SECONDARY = package.json/pnpm-lock.yaml)。
 
 **Firefox AMO は CI 未対応** で手動 `web-ext sign` が必要 (上記「Firefox AMO 公開フロー」)。 publish.yml を AMO 対応に拡張する場合は ReplaceFontSelect (`C:\Users\szk\Work\ReplaceFontSelect`) の matrix strategy + 後続 step に `if: ${{ success() || failure() }}` を明示する連鎖 skip 解除パターンを移植する。
 
@@ -185,6 +185,6 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 1. Raindrop.io 開発者コンソール (https://app.raindrop.io/settings/integrations) でアプリ作成
 2. `chrome.identity.getRedirectURL()` の値をリダイレクト URI に登録
 3. `src/background/background.js` の `OAuthConfig` の `CLIENT_ID` / `CLIENT_SECRET` を設定
-4. `npm install && npm run build` でアイコン・ストア画像生成
+4. `pnpm install && pnpm run build` でアイコン・ストア画像生成
 5. **Chrome**: `chrome://extensions` で開発者モード → パッケージ化されていない拡張機能を読み込む
 6. **Firefox 128+**: `about:debugging#/runtime/this-firefox` → 「一時的なアドオンを読み込む...」 → `manifest.json` を選択 (再起動で消えるのは仕様)
