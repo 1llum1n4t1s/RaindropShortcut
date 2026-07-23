@@ -36,7 +36,7 @@ scripts/                # 開発用スクリプト
   ├── generate-icons.js          # icons/icon.svg → PNG (sharp)
   ├── amo-metadata-update.js     # AMO API v5 で name/summary/description/privacy_policy を一括 PATCH
   └── amo-previews-upload.js     # AMO previews multipart upload (rate limit 重く実用は Dev Hub 手動)
-.github/workflows/      # publish.yml (Chrome Web Store 専用、 Firefox AMO は手動)
+.github/workflows/      # publish.yml (Chrome Web Store + Firefox AMO の自動公開)
 .amo-metadata.json      # AMO 提出時の categories + version.license (web-ext sign が読む)
 ```
 
@@ -123,23 +123,23 @@ chrome.storage.local:
 
 ## Cross-Browser (Chrome / Firefox 両対応)
 
-単一 `manifest.json` で両ブラウザ対応するために以下を併記している。 Chrome は Firefox 固有フィールドを silently ignore する。
+`manifest.json` の正本は Chrome 向け (`service_worker` のみ) とし、 Firefox 固有の差分は firefox-build/ 構築時に注入する。 Chrome は Firefox 固有フィールドを silently ignore する。
 
-- **`browser_specific_settings.gecko`** — Firefox 用 extension id (`{37d6aac9-e947-4a4b-982d-f9945e41b234}`) と `strict_min_version: "128.0"`、 `data_collection_permissions.required: ["none"]` を保持。
-- **`background.service_worker` + `background.scripts` 併記** — Chrome は `service_worker` を SW として、 Firefox は `scripts` 配列を event page として読む。 AMO validator は `service_worker` 単独を reject する (`"Unsupported /background/service_worker manifest property used without /background/scripts property as Firefox-compatible fallback"`)。 `scripts` 配列の先頭に `src/lib/actions.js` を置くことで `TokenStorageKeys` 等のグローバルが evaluation 順で先に定義される。
+- **`browser_specific_settings.gecko`** — Firefox 用 extension id (`{37d6aac9-e947-4a4b-982d-f9945e41b234}`) と `strict_min_version: "128.0"`、 `data_collection_permissions.required: ["none"]` を保持 (正本に併記したまま。 Chrome は無視する)。
+- **`background.scripts` は firefox-build 構築時に注入** — 正本に `service_worker` と併記すると Chrome の拡張機能画面に `'background.scripts' requires manifest version of 2 or lower.` 警告が出るため、 正本には置かない。 firefox-build/ 構築の `node -e` で `m.background.scripts=['src/lib/actions.js','src/background/background.js']` を追加する (publish.yml と手動フローの両方)。 Firefox は `scripts` 配列を event page として読み、 AMO validator は `service_worker` 単独を reject する (`"Unsupported /background/service_worker manifest property used without /background/scripts property as Firefox-compatible fallback"`)。 `scripts` 配列の先頭に `src/lib/actions.js` を置くことで `TokenStorageKeys` 等のグローバルが evaluation 順で先に定義される。
 - **`importScripts` の typeof guard** — `worker` 限定 API なので Firefox event page では `ReferenceError` になる。 `background.js` 先頭で `typeof importScripts === "function"` で囲み、worker のときだけ呼ぶ。
 - **`manifest.json` の `key` フィールド** — Chrome ローカル開発用の公開鍵。 Firefox AMO は無視するが、 配布物には不要なので `zip.ps1` / `zip.sh` と firefox-build/ 構築時に削除する。
 
-## Firefox AMO 公開フロー (手動)
+## Firefox AMO 公開フロー (手動フォールバック)
 
-`.github/workflows/publish.yml` は Chrome Web Store 専用なので、 AMO への新バージョン提出はローカルで手動実行する。 初回登録時の guid は `manifest.json` の `gecko.id` を使って `web-ext sign` が AMO 上に自動作成する。
+通常の新バージョン提出は `.github/workflows/publish.yml` の firefox job が自動実行する。 以下は CI が使えない場合のローカル手動手順と、 Firefox ローカル開発用の firefox-build/ 構築手順を兼ねる。 初回登録時の guid は `manifest.json` の `gecko.id` を使って `web-ext sign` が AMO 上に自動作成する。
 
 ```powershell
-# 1. firefox-build/ を構築 (key を除いた manifest + icons PNG + src/)
+# 1. firefox-build/ を構築 (key を除き background.scripts を注入した manifest + icons PNG + src/)
 $dir = "firefox-build"
 Remove-Item $dir -Recurse -Force -EA SilentlyContinue
 New-Item -ItemType Directory $dir | Out-Null
-node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
+node -e "const m=require('./manifest.json');delete m.key;m.background.scripts=['src/lib/actions.js','src/background/background.js'];require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
 New-Item -ItemType Directory "$dir/icons" | Out-Null
 Copy-Item "icons/icon-16.png","icons/icon-48.png","icons/icon-128.png" -Destination "$dir/icons/"
 Copy-Item "src" -Destination $dir -Recurse
@@ -174,11 +174,11 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 
 ## CI / Release
 
-`.github/workflows/publish.yml` は **Chrome Web Store 専用** の自動公開ワークフロー。 `release/<X.Y.Z>` push でトリガー。 外部 action は SHA 固定、 `chrome-webstore-upload-cli` は devDependencies に exact pin して `pnpm exec` 経由で実行する (サプライチェーン対策)。
+`.github/workflows/publish.yml` は Chrome Web Store と Firefox AMO の自動公開ワークフロー。 `release/<X.Y.Z>` push でトリガー。 外部 action は SHA 固定、 `chrome-webstore-upload-cli` は devDependencies に exact pin して `pnpm exec` 経由で実行する (サプライチェーン対策)。 v4 から認証は環境変数のみ (`CLIENT_ID` / `CLIENT_SECRET` / `REFRESH_TOKEN` / `PUBLISHER_ID` / `EXTENSION_ID`) で、 `PUBLISHER_ID` は GitHub Secrets `CWS_PUBLISHER_ID` (正本は secrets.json の `chrome_web_store.publisher_id`) から渡す。 サブコマンド無しで upload + publish 一括 (`--auto-publish` は廃止)。
 
 バージョン更新は `manifest.json` を Edit で書き換え、 `package.json` / `pnpm-lock.yaml` は `pnpm version <X.Y.Z> --no-git-tag-version` で同期。 `/vava` スキルが一括バンプ + release ブランチ作成 + 古いブランチ掃除まで自動化する (PRIMARY_VERSION_FILE = manifest.json、 SECONDARY = package.json/pnpm-lock.yaml)。
 
-**Firefox AMO は CI 未対応** で手動 `web-ext sign` が必要 (上記「Firefox AMO 公開フロー」)。 publish.yml を AMO 対応に拡張する場合は ReplaceFontSelect (`C:\Users\szk\Work\ReplaceFontSelect`) の matrix strategy + 後続 step に `if: ${{ success() || failure() }}` を明示する連鎖 skip 解除パターンを移植する。
+Firefox AMO も publish.yml の firefox job が `web-ext sign` (`--approval-timeout=0`) で自動 submission する。 CI が使えない場合のフォールバックは上記「Firefox AMO 公開フロー (手動フォールバック)」。
 
 ## Setup
 
@@ -187,4 +187,4 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 3. `src/background/background.js` の `OAuthConfig` の `CLIENT_ID` / `CLIENT_SECRET` を設定
 4. `pnpm install && pnpm run build` でアイコン・ストア画像生成
 5. **Chrome**: `chrome://extensions` で開発者モード → パッケージ化されていない拡張機能を読み込む
-6. **Firefox 128+**: `about:debugging#/runtime/this-firefox` → 「一時的なアドオンを読み込む...」 → `manifest.json` を選択 (再起動で消えるのは仕様)
+6. **Firefox 128+**: 先に「Firefox AMO 公開フロー」手順 1 で `firefox-build/` を構築 (`background.scripts` 注入が必要なため、ルートの `manifest.json` 直接読み込みでは background が動かない) → `about:debugging#/runtime/this-firefox` → 「一時的なアドオンを読み込む...」 → `firefox-build/manifest.json` を選択 (再起動で消えるのは仕様)
