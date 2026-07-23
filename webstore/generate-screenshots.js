@@ -12,38 +12,33 @@ const HTML_CONFIGS = [
     input: path.join(TEMPLATE_DIR, '01-feature-overview.html'),
     output: '01-feature-overview-1280x800.png',
     width: 1280,
-    height: 800,
-    type: 'screenshot'
+    height: 800
   },
   {
     input: path.join(TEMPLATE_DIR, '02-how-to-use.html'),
     output: '02-how-to-use-1280x800.png',
     width: 1280,
-    height: 800,
-    type: 'screenshot'
+    height: 800
   },
   {
     input: path.join(TEMPLATE_DIR, '03-hero-promo.html'),
     output: '03-hero-promo-1280x800.png',
     width: 1280,
-    height: 800,
-    type: 'screenshot'
+    height: 800
   },
   // プロモーション タイル（小）：440x280
   {
     input: path.join(TEMPLATE_DIR, '04-promo-small.html'),
     output: 'promo-small-440x280.png',
     width: 440,
-    height: 280,
-    type: 'promo-small'
+    height: 280
   },
   // マーキー プロモーション タイル：1400x560
   {
     input: path.join(TEMPLATE_DIR, '05-promo-marquee.html'),
     output: 'promo-marquee-1400x560.png',
     width: 1400,
-    height: 560,
-    type: 'promo-marquee'
+    height: 560
   }
 ];
 
@@ -87,7 +82,7 @@ async function main() {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: 300000
   });

@@ -19,7 +19,8 @@ const path = require("path");
 
 const ISS = process.env.AMO_JWT_ISSUER;
 const SECRET = process.env.AMO_JWT_SECRET;
-const GUID = "{37d6aac9-e947-4a4b-982d-f9945e41b234}";
+// GUID の正本は manifest.json の gecko.id (ハードコード複製による更新漏れ防止)
+const GUID = require("../manifest.json").browser_specific_settings.gecko.id;
 const HOST = "addons.mozilla.org";
 const BASE = `https://${HOST}`;
 

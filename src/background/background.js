@@ -141,10 +141,16 @@ async function handleLogin() {
     `&response_type=code` +
     `&state=${state}`;
 
-  const responseUrl = await chrome.identity.launchWebAuthFlow({
-    url: authUrl,
-    interactive: true,
-  });
+  // 認証ウィンドウを閉じた場合等の英語例外は日本語へ正規化 (UI は日本語契約)
+  let responseUrl;
+  try {
+    responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true,
+    });
+  } catch {
+    throw new Error("認証ウィンドウが閉じられたか、認証に失敗しました");
+  }
 
   if (!responseUrl) {
     throw new Error("\u8a8d\u8a3c\u304c\u30ad\u30e3\u30f3\u30bb\u30eb\u3055\u308c\u307e\u3057\u305f");
@@ -164,23 +170,30 @@ async function handleLogin() {
     throw new Error("\u8a8d\u8a3c\u30b3\u30fc\u30c9\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
   }
 
-  const res = await fetchWithTimeout(OAuthConfig.TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "authorization_code",
-      code,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
-      redirect_uri: redirectUri,
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error("\u30c8\u30fc\u30af\u30f3\u4ea4\u63db\u306b\u5931\u6557\u3057\u307e\u3057\u305f");
+  // refreshAccessToken \u3068\u540c\u69d8\u3001\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u65ad\u30fb\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8\u306e\u82f1\u8a9e\u4f8b\u5916\u306f\u65e5\u672c\u8a9e\u3078\u6b63\u898f\u5316
+  let json;
+  try {
+    const res = await fetchWithTimeout(OAuthConfig.TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        grant_type: "authorization_code",
+        code,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        redirect_uri: redirectUri,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error("\u30c8\u30fc\u30af\u30f3\u4ea4\u63db\u306b\u5931\u6557\u3057\u307e\u3057\u305f");
+    }
+    json = await res.json();
+  } catch (e) {
+    if (e instanceof TypeError || e.name === "TimeoutError" || e.name === "AbortError") {
+      throw new Error("\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u306b\u63a5\u7d9a\u3067\u304d\u307e\u305b\u3093");
+    }
+    throw e;
   }
-
-  const json = await res.json();
   await saveTokens(json);
 }
 

@@ -48,6 +48,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const btnLogin = $("#btn-login");
   const loginError = $("#login-error");
+  // バージョン表記は manifest を正本にする (ハードコードだと更新漏れでズレる)
+  $("#login-foot").textContent =
+    `v${chrome.runtime.getManifest().version} · 認証は OAuth 2.0`;
 
   const collectionName = $("#collection-name");
   const btnSettings = $("#btn-settings");
@@ -98,9 +101,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const li = document.createElement("li");
     li.className = "bookmark-item";
     li.title = item.title;
-    // 先頭 ~30 件のみスタッガード・フェードイン用の --i を渡す
-    if (animate) {
-      if (index < 30) li.style.setProperty("--i", String(index));
+    // 先頭 ~30 件のみスタッガード・フェードイン。31 件目以降は no-anim で即表示
+    // (--i 未設定だと既定値 0 の delay で全件が一斉アニメーションしてしまうため)
+    if (animate && index < 30) {
+      li.style.setProperty("--i", String(index));
     } else {
       li.classList.add("no-anim");
     }
@@ -250,9 +254,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       // \u30ad\u30e3\u30c3\u30b7\u30e5\u66f4\u65b0\u7d4c\u7531 (reset=false) \u3067\u306f\u4e2d\u9593\u30ec\u30f3\u30c0\u30fc\u3092\u3057\u306a\u3044 (\u4e00\u89a7\u306e\u30c1\u30e9\u3064\u304d\u56de\u907f)
       if (reset) {
         state.bookmarks = all;
-        const prevScroll = listContainer.scrollTop;
-        rerender();
-        listContainer.scrollTop = prevScroll;
+        if (state.searchQuery) {
+          const prevScroll = listContainer.scrollTop;
+          applyFilter();
+          listContainer.scrollTop = prevScroll;
+        } else {
+          // \u5168\u518d\u69cb\u7bc9\u3060\u3068\u7d2f\u7a4d\u30ce\u30fc\u30c9\u751f\u6210\u304c O(n\u00b2/\u30c1\u30e3\u30f3\u30af) \u306b\u306a\u308b\u305f\u3081\u3001\u65b0\u7740\u5206\u3060\u3051\u8ffd\u8a18\u3059\u308b
+          state.filteredBookmarks = all;
+          emptyMessage.hidden = true;
+          const fragment = document.createDocumentFragment();
+          for (let j = bookmarkList.childElementCount; j < all.length; j++) {
+            fragment.appendChild(createBookmarkItem(all[j], j, false));
+          }
+          bookmarkList.appendChild(fragment);
+        }
       }
     }
 
