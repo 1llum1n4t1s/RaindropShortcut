@@ -6,13 +6,13 @@
   "scripts": {
     "generate-icons": "node scripts/generate-icons.js",
     "generate-screenshots": "node webstore/generate-screenshots.js",
-    "build": "npm run generate-icons && npm run generate-screenshots"
+    "build": "pnpm run generate-icons && pnpm run generate-screenshots"
   },
   "devDependencies": {
-    "chrome-webstore-upload-cli": "^3.3.2",
-    "puppeteer": "^24.37.5",
-    "sharp": "^0.33.0",
-    "web-ext": "10.1.0"
+    "chrome-webstore-upload-cli": "^4.0.1",
+    "puppeteer": "^25.3.0",
+    "sharp": "^0.35.3",
+    "web-ext": "10.5.0"
   },
   "keywords": [
     "chrome-extension",

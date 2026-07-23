@@ -36,16 +36,21 @@ jobs:
           fi
           echo "✅ ブランチ名と manifest バージョン一致: $expected"
 
+      - name: pnpm セットアップ
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 11
+
       - name: Node セットアップ
         # actions/setup-node v5 (commit SHA で固定)
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: 依存インストール
-        # lockfile 整合性を強制するため npm ci のみ。失敗時はフォールバックせず原因修正を強制。
-        run: npm ci
+        # lockfile 整合性を強制するため frozen-lockfile のみ。失敗時はフォールバックせず原因修正を強制。
+        run: pnpm install --frozen-lockfile
 
       - name: アイコン生成
         run: node scripts/generate-icons.js
@@ -63,21 +68,24 @@ jobs:
           ls -lh raindrop-shortcut.zip
 
       - name: Chrome Web Store にアップロード & 公開
-        # chrome-webstore-upload-cli はローカル devDep にインストール済 (package.json で固定)
-        # secrets を持つステップで npm レジストリから未検証コードを取得しない方針。
+        # chrome-webstore-upload-cli v4: 認証情報は CLI フラグ廃止・環境変数のみ
+        # (CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN / PUBLISHER_ID / EXTENSION_ID)。
+        # v4 は PUBLISHER_ID が新規必須 (CWS Developer Dashboard の Settings で確認)。
+        # サブコマンドなしで upload + publish を一括実行 (--auto-publish は v4 で削除)。
+        # devDep に exact pin した版を pnpm exec で実行 (未検証コードを取得しない方針)。
         env:
-          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
-          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
-          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
-          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
         run: |
-          npx --no-install chrome-webstore-upload-cli upload \
-            --source raindrop-shortcut.zip \
-            --extension-id "$CWS_EXTENSION_ID" \
-            --client-id "$CWS_CLIENT_ID" \
-            --client-secret "$CWS_CLIENT_SECRET" \
-            --refresh-token "$CWS_REFRESH_TOKEN" \
-            --auto-publish
+          # Secrets 欠落時に CLI の不透明なエラーではなく一行目で fail-fast する
+          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ] || [ -z "$REFRESH_TOKEN" ] || [ -z "$PUBLISHER_ID" ] || [ -z "$EXTENSION_ID" ]; then
+            echo "::error::CWS_CLIENT_ID / CWS_CLIENT_SECRET / CWS_REFRESH_TOKEN / CWS_PUBLISHER_ID / CWS_EXTENSION_ID の GitHub Secrets が未設定です"
+            exit 1
+          fi
+          pnpm exec chrome-webstore-upload --source raindrop-shortcut.zip
           echo "🎉 Chrome Web Store への公開リクエストを送信したよ〜"
 
   firefox:
@@ -107,15 +115,20 @@ jobs:
           fi
           echo "✅ ブランチ名と manifest バージョン一致: $expected"
 
+      - name: pnpm セットアップ
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1  # v4
+        with:
+          version: 11
+
       - name: Node セットアップ
         # actions/setup-node v5 (commit SHA で固定)
         uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: '22'
+          cache: 'pnpm'
 
       - name: 依存インストール
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: アイコン生成
         run: node scripts/generate-icons.js
@@ -123,22 +136,24 @@ jobs:
       - name: firefox-build/ を構築
         run: |
           # Chrome ローカル開発専用の key フィールドを除去 (AMO は無視するが配布物には不要)
+          # Firefox は event page として background.scripts を読むため、ここで注入する
+          # (manifest.json 正本に scripts を併記すると Chrome の拡張機能画面に警告が出る)
           mkdir -p firefox-build/icons
-          node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
+          node -e "const m=require('./manifest.json');delete m.key;m.background.scripts=['src/lib/actions.js','src/background/background.js'];require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
           cp icons/icon-16.png icons/icon-48.png icons/icon-128.png firefox-build/icons/
           cp -r src firefox-build/
           find firefox-build \( -name "*.DS_Store" -o -name "*.swp" -o -name "*~" \) -delete
           ls -la firefox-build
 
       - name: AMO へ submission
-        # web-ext は devDep に exact pin (package.json で固定)。supply chain 対策で npx --no-install。
+        # web-ext は devDep に exact pin (package.json で固定)。supply chain 対策で pnpm exec (ローカル依存のみ実行)。
         # --approval-timeout=0: submission 受理直後に exit (AMO 側の signing 完了は待たない、配信は Mozilla 自動)。
         # 同 version 重複 push 時は AMO 側で reject される (新バージョンのみ submission 可)。
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
         run: |
-          npx --no-install web-ext sign \
+          pnpm exec web-ext sign \
             --source-dir=firefox-build \
             --artifacts-dir=web-ext-artifacts \
             --channel=listed \

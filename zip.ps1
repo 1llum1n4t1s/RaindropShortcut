@@ -10,7 +10,7 @@ if ($scriptDir) { Set-Location $scriptDir }
 
 # アイコン生成
 Write-Host "アイコンを生成中..." -ForegroundColor Yellow
-npm install --silent 2>$null
+pnpm install --silent 2>$null
 node scripts/generate-icons.js
 
 # 古いZIPファイルを削除

@@ -9,7 +9,7 @@ rm -f ./raindrop-shortcut.zip
 
 if [ -f scripts/generate-icons.js ]; then
   echo "アイコン生成中..."
-  npm install --silent 2>/dev/null
+  pnpm install --silent 2>/dev/null
   node scripts/generate-icons.js
 fi
 
