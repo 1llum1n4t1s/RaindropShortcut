@@ -19,11 +19,7 @@
     "128": "icons/icon-128.png"
   },
   "background": {
-    "service_worker": "src/background/background.js",
-    "scripts": [
-      "src/lib/actions.js",
-      "src/background/background.js"
-    ]
+    "service_worker": "src/background/background.js"
   },
   "permissions": [
     "identity",
