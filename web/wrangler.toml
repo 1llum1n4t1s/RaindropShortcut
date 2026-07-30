@@ -1,0 +1,23 @@
+# Raindrop Shortcuts のランディングページ配信 Worker。
+# 新規ホスト名なので配信先は kagayoi.com のみとする（屋号統一のため nephilim.jp 側は新設しない）。
+# custom_domain = true にすると wrangler が DNS レコードごと作成・管理する。
+name = "raindropshortcuts-landing"
+main = "worker.js"
+compatibility_date = "2026-07-21"
+
+[[routes]]
+pattern = "raindropshortcuts.kagayoi.com"
+custom_domain = true
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html", "**/*.css", "**/script.js", "**/*.txt", "**/*.xml"]
+fallthrough = true
+
+[[rules]]
+type = "Data"
+globs = ["**/*.png"]
+fallthrough = false
+
+[observability]
+enabled = true

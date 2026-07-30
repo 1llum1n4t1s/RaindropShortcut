@@ -22,3 +22,6 @@ web-ext-artifacts/
 *.secret
 *.pem
 *.key
+
+# wrangler のローカル状態キャッシュ (web/ のデプロイ時に生成される)
+web/.wrangler/

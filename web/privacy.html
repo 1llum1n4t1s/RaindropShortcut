@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Raindrop Shortcutsのプライバシーポリシー。収集するデータ、ローカルに保存するデータ、権限の使用目的を説明します。">
+  <meta name="theme-color" content="#eef5f7">
+  <meta name="robots" content="index, follow">
+  <title>プライバシーポリシー — Raindrop Shortcuts</title>
+  <link rel="canonical" href="https://raindropshortcuts.kagayoi.com/privacy">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+
+  <header class="site-header legal-header">
+    <a class="brand" href="/" aria-label="Raindrop Shortcuts ホーム">
+      <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true">
+        <path d="M21 4 9 19a12 12 0 1 0 24 0L21 4Zm-8 22h16" />
+      </svg>
+      <span>Raindrop Shortcuts</span>
+    </a>
+    <a class="header-link" href="/">ランディングページへ戻る <span aria-hidden="true">←</span></a>
+  </header>
+
+  <main id="main" class="legal section-shell">
+    <h1>プライバシー<br>ポリシー</h1>
+    <p class="legal-lead">最終更新日: 2026年4月18日</p>
+      <section>
+        <h2>はじめに</h2>
+        <p>「Raindrop Shortcut」（以下「本拡張機能」）は、ユーザーのプライバシーを尊重し、個人情報の保護に努めます。本プライバシーポリシーは、本拡張機能におけるデータの取り扱いについて説明します。</p>
+      </section>
+      <section>
+        <h2>収集するデータ</h2>
+        <p>本拡張機能は、個人情報を一切収集しません。</p>
+      </section>
+      <section>
+        <h2>ローカルに保存するデータ</h2>
+        <p>本拡張機能は、以下の設定データをユーザーの端末内（<code>chrome.storage.local</code>）にのみ保存します。</p>
+        <ul>
+          <li>OAuth アクセストークン・リフレッシュトークン（Raindrop.io との認証用）</li>
+          <li>選択中のコレクション情報</li>
+          <li>テーマ設定（自動 / ライト / ダーク）</li>
+          <li>リンクの開き方設定（新しいタブ / 現在のタブ）</li>
+          <li>ブックマーク一覧のローカルキャッシュ（popup 再表示の高速化目的、TTL 5 分）</li>
+        </ul>
+        <p>これらのデータは端末内にのみ保存され、Raindrop.io 以外の外部サーバーへの送信は一切行いません。</p>
+      </section>
+      <section>
+        <h2>データの共有</h2>
+        <p>本拡張機能は、いかなるデータも第三者と共有しません。</p>
+      </section>
+      <section>
+        <h2>ネットワーク通信</h2>
+        <p>本拡張機能は、以下の目的でのみ外部通信を行います。</p>
+        <ul>
+          <li><strong>raindrop.io</strong> — OAuth 2.0 認証（ログイン・トークン更新）</li>
+          <li><strong>api.raindrop.io</strong> — ブックマーク・コレクション情報の取得</li>
+          <li><strong>www.google.com (Favicon Service)</strong> — ブックマーク一覧に表示する favicon 画像の取得のため、各ブックマークのドメイン名のみを送信します。ブックマーク自体のタイトル・URL・その他の個人識別情報は送信しません。</li>
+          <li><strong>fonts.googleapis.com / fonts.gstatic.com (Google Fonts)</strong> — ポップアップ UI のフォント (IBM Plex Sans JP / IBM Plex Mono) を取得するため、ブラウザがフォント定義 CSS とフォントファイル (woff2) を読み込みます。ユーザーのブックマーク情報は送信しません。フォントは初回取得後ブラウザキャッシュされます。</li>
+        </ul>
+        <p>上記以外のサーバーとの通信は一切行いません。</p>
+      </section>
+      <section>
+        <h2>権限の使用目的</h2>
+        <ul>
+          <li><strong>identity</strong>: Raindrop.io の OAuth 2.0 認証フローを実行するために使用します。</li>
+          <li><strong>storage</strong>: 認証トークン、コレクション選択、テーマ設定、リンク設定、ブックマークキャッシュをローカルに保存・復元するために使用します。</li>
+          <li><strong>host_permissions (api.raindrop.io, raindrop.io)</strong>: Raindrop.io の公式 API からブックマーク・コレクション情報を取得し、OAuth 認証のトークン交換を行うために使用します。</li>
+        </ul>
+      </section>
+      <section>
+        <h2>お問い合わせ</h2>
+        <p>本プライバシーポリシーに関するご質問は、Chrome Web Store のサポートページよりお問い合わせください。</p>
+      </section>
+      <section>
+        <h2>変更について</h2>
+        <p>本プライバシーポリシーは予告なく変更される場合があります。変更があった場合は、本ページを更新します。</p>
+      </section>
+    <section>
+      <h2>この文書の正本</h2>
+      <p>本ページは <a href="https://github.com/1llum1n4t1s/RaindropShortcut/blob/main/docs/privacy-policy.md">GitHub 上の docs/privacy-policy.md</a> を正本として生成しています。差異がある場合は GitHub 側の内容が優先されます。</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 4 9 19a12 12 0 1 0 24 0L21 4Zm-8 22h16" /></svg>
+      <span>Raindrop Shortcuts</span>
+    </a>
+    <nav class="footer-links" aria-label="フッターナビゲーション">
+      <a href="https://github.com/1llum1n4t1s/RaindropShortcut">GitHub</a>
+      <a href="https://chromewebstore.google.com/detail/jdehenbjjipaibjccdblhdhffmlggdnp">Chrome ウェブストア</a>
+      <a href="https://addons.mozilla.org/ja/firefox/addon/raindrop-shortcuts/">Firefox アドオン</a>
+      <a href="/privacy">プライバシー</a>
+    </nav>
+    <p>MIT License · 2026 Kagayoi</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Raindrop Shortcuts は Raindrop.io に保存したブックマークを、ツールバーから素早く検索・アクセスできる Chrome / Firefox 拡張機能です。">
+  <meta name="theme-color" content="#eef5f7">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:title" content="Raindrop Shortcuts — ブックマークを、1 クリック先に。">
+  <meta property="og:description" content="Raindrop Shortcuts は Raindrop.io に保存したブックマークを、ツールバーから素早く検索・アクセスできる Chrome / Firefox 拡張機能です。">
+  <meta property="og:url" content="https://raindropshortcuts.kagayoi.com/">
+  <title>Raindrop Shortcuts — ブックマークを、1 クリック先に。</title>
+  <link rel="canonical" href="https://raindropshortcuts.kagayoi.com/">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Raindrop Shortcuts ホーム">
+      <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true">
+        <path d="M21 4 9 19a12 12 0 1 0 24 0L21 4Zm-8 22h16" />
+      </svg>
+      <span>Raindrop Shortcuts</span>
+    </a>
+    <nav class="site-nav" aria-label="メインナビゲーション">
+      <a href="#why">何ができるか</a>
+      <a href="#how">使い方</a>
+      <a href="#features">機能</a>
+      <a href="https://github.com/1llum1n4t1s/RaindropShortcut">GitHub</a>
+    </nav>
+    <a class="header-link" href="#install">インストール <span aria-hidden="true">↓</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-copy reveal">
+        <p class="eyebrow"><span>Raindrop.io launcher</span><span>Chrome / Firefox</span></p>
+        <h1>ブックマークを、<br><em>1 クリック先に。</em></h1>
+        <p class="hero-lead">Raindrop.io に貯めたブックマークを、ツールバーのアイコンからそのまま検索して開く。サイトを開いてから探す時間をなくします。</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://chromewebstore.google.com/detail/jdehenbjjipaibjccdblhdhffmlggdnp">Chrome に追加</a>
+          <a class="text-link" href="https://addons.mozilla.org/ja/firefox/addon/raindrop-shortcuts/">Firefox 版 <span aria-hidden="true">↗</span></a>
+        </div>
+        <dl class="hero-facts" aria-label="製品概要">
+          <div><dt>表示対象</dt><dd>選んだコレクション</dd></div>
+          <div><dt>検索</dt><dd>タイトル / ドメインで絞り込み</dd></div>
+        </dl>
+      </div>
+
+      <figure class="shot reveal">
+        <img src="popup.png" width="400" height="600" alt="Raindrop Shortcuts のポップアップ画面">
+        <figcaption>拡張機能アイコンをクリックしたときに表示される実際のポップアップ画面です。</figcaption>
+      </figure>
+    </section>
+
+    <section class="metric-ribbon" aria-label="主な機能">
+      <span>コレクション選択</span>
+      <span>インクリメンタル検索</span>
+      <span>ダークモード</span>
+      <span>コンパクト表示</span>
+      <span>開き方切替</span>
+    </section>
+
+    <section class="problem section-shell reveal" id="why">
+      <div class="section-intro">
+        <p class="section-code">WHAT IT DOES</p>
+        <h2>探す場所を、<br>ツールバーへ。</h2>
+      </div>
+      <div class="spec-panel">
+        <p>Raindrop Shortcuts の基本仕様</p>
+        <dl class="spec-grid">
+          <div><dt>一覧表示</dt><dd>選択したコレクション内のブックマークを即座に表示</dd></div>
+          <div><dt>コレクション選択</dt><dd>Raindrop.io のコレクションツリーから表示対象を指定</dd></div>
+          <div><dt>検索</dt><dd>タイトル・ドメインへのインクリメンタルフィルタ</dd></div>
+          <div><dt>表示</dt><dd>favicon + タイトル + ドメインの 1 行レイアウト</dd></div>
+          <div><dt>リンクの開き方</dt><dd>新しいタブ / 現在のタブを設定で切り替え</dd></div>
+        </dl>
+        <p class="spec-note">OS のダークモード設定に自動追従するほか、ライト / ダーク / 自動を手動でも切り替えられます。</p>
+      </div>
+    </section>
+
+    <section class="process section-shell" id="how">
+      <div class="process-step reveal">
+        <span class="step-index">01</span>
+        <h3>Raindrop.io と連携</h3>
+        <p>拡張機能から Raindrop.io にログインして、アカウントを接続します。</p>
+      </div>
+      <div class="process-step reveal">
+        <span class="step-index">02</span>
+        <h3>表示するコレクションを選ぶ</h3>
+        <p>設定画面のコレクションツリーから、普段使うフォルダを指定します。</p>
+      </div>
+      <div class="process-step reveal">
+        <span class="step-index">03</span>
+        <h3>アイコンから開く</h3>
+        <p>ツールバーのアイコンをクリックして一覧表示。キーワードを打てばその場で絞り込めます。</p>
+      </div>
+    </section>
+
+    <section class="feature section-shell" id="features">
+      <div class="feature-copy reveal">
+        <p class="section-code">FEATURES</p>
+        <h2>大量でも、<br>一覧しやすく。</h2>
+        <p>favicon・タイトル・ドメインだけの 1 行表示にすることで、数百件のブックマークでもスクロール量を抑えて見渡せます。</p>
+        <ul class="check-list">
+          <li>タイトルとドメインへのインクリメンタル検索</li>
+          <li>OS 設定に追従するダークモード</li>
+          <li>リンクを新しいタブ / 現在のタブで開く切り替え</li>
+        </ul>
+      </div>
+
+      <div class="fact-panel reveal">
+        <p>対象と処理の一覧</p>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead>
+              <tr><th scope="col">項目</th><th scope="col">内容</th><th scope="col">状態</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">コレクション</th><td>選択したフォルダのみ</td><td>SCOPED</td></tr>
+              <tr><th scope="row">検索</th><td>タイトル / ドメイン</td><td>LIVE</td></tr>
+              <tr><th scope="row">表示</th><td>favicon + 1 行</td><td>COMPACT</td></tr>
+              <tr><th scope="row">テーマ</th><td>ライト / ダーク / 自動</td><td>AUTO</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="fact-note">
+          <span>OPEN BEHAVIOR</span>
+          <code>target: new tab | current tab</code>
+          <strong>configurable</strong>
+          <b>クリック時の挙動を設定から切り替えられる</b>
+        </p>
+      </div>
+    </section>
+
+    <section class="principles section-shell reveal">
+      <p class="section-code">DESIGN PRINCIPLES</p>
+      <div class="principle-grid">
+        <article><span>FAST</span><h3>1 クリックで一覧</h3><p>サイトを開かずに、ツールバーから直接ブックマークへ到達します。</p></article>
+        <article><span>DENSE</span><h3>情報密度を上げる</h3><p>1 行表示で、大量のブックマークでも見渡せるレイアウトにしています。</p></article>
+        <article><span>YOURS</span><h3>自分のアカウントで</h3><p>接続先はあなたの Raindrop.io アカウント。第三者に共有しません。</p></article>
+      </div>
+    </section>
+
+    <section class="install section-shell" id="install">
+      <div class="install-copy reveal">
+        <p class="section-code">INSTALL</p>
+        <h2>保存したことを、<br>忘れないために。</h2>
+        <p>Raindrop.io のアカウントが必要です。Chromium 系ブラウザと Firefox 128 以降に対応。MIT License。</p>
+      </div>
+      <div class="install-panel reveal">
+        <code><span>REQUIRES</span> Raindrop.io account</code>
+        <a class="button " href="https://chromewebstore.google.com/detail/jdehenbjjipaibjccdblhdhffmlggdnp">Chrome に追加 <span aria-hidden="true">↗</span></a>
+        <a class="text-link install-text-link" href="https://addons.mozilla.org/ja/firefox/addon/raindrop-shortcuts/">Firefox に追加 <span aria-hidden="true">↗</span></a>
+        <a class="text-link install-text-link" href="https://github.com/1llum1n4t1s/RaindropShortcut">ソースを見る <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand" href="/">
+      <svg class="brand-mark" viewBox="0 0 42 42" aria-hidden="true"><path d="M21 4 9 19a12 12 0 1 0 24 0L21 4Zm-8 22h16" /></svg>
+      <span>Raindrop Shortcuts</span>
+    </a>
+    <nav class="footer-links" aria-label="フッターナビゲーション">
+      <a href="https://github.com/1llum1n4t1s/RaindropShortcut">GitHub</a>
+      <a href="https://chromewebstore.google.com/detail/jdehenbjjipaibjccdblhdhffmlggdnp">Chrome ウェブストア</a>
+      <a href="https://addons.mozilla.org/ja/firefox/addon/raindrop-shortcuts/">Firefox アドオン</a>
+      <a href="/privacy">プライバシー</a>
+    </nav>
+    <p>MIT License · 2026 Kagayoi</p>
+  </footer>
+</body>
+</html>

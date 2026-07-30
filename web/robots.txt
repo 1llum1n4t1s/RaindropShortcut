@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://raindropshortcuts.kagayoi.com/sitemap.xml
