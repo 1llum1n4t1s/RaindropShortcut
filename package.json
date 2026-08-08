@@ -10,9 +10,9 @@
   },
   "devDependencies": {
     "chrome-webstore-upload-cli": "^4.0.1",
-    "puppeteer": "^25.3.0",
+    "puppeteer": "^25.5.0",
     "sharp": "^0.35.3",
-    "web-ext": "10.5.0"
+    "web-ext": "10.6.0"
   },
   "keywords": [
     "chrome-extension",
