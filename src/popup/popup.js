@@ -271,6 +271,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
+    // \u30ed\u30b0\u30a2\u30a6\u30c8\u3084 401 \u3067 generation \u304c\u9032\u3093\u3067\u3044\u305f\u3089\u3001state \u3082\u30ad\u30e3\u30c3\u30b7\u30e5\u3082\u66f8\u304d\u623b\u3055\u306a\u3044
+    if (currentGen !== loadGeneration) {
+      resetLoading();
+      return;
+    }
+
     all.sort((a, b) => collator.compare(a.title, b.title));
     state.bookmarks = all;
 
@@ -304,8 +310,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return false;
     }
     if (res.error === "unauthorized") {
-      resetLoading();
-      showScreen(Screens.LOGIN);
+      resetToLoginScreen();
       return false;
     }
     if (res.error === "network") {
@@ -324,6 +329,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   function showErrorMessage(msg) {
     emptyMessage.hidden = false;
     emptyMessage.textContent = msg;
+  }
+
+  /**
+   * アカウント境界をまたいで持ち越してはいけないローカル状態を消す。
+   * bookmarksCache はユーザー ID と紐付いていないため、残すと別アカウントで
+   * ログインし直したときに前ユーザーの一覧が TTL 内で描画されてしまう。
+   * selectedCollection も前ユーザーのコレクション ID なので取得先が狂う。
+   */
+  function clearUserScopedStorage() {
+    return chrome.storage.local.remove([
+      StorageKeys.BOOKMARKS_CACHE,
+      StorageKeys.SELECTED_COLLECTION,
+    ]);
+  }
+
+  /**
+   * ログイン画面へ戻す際の後始末。loadGeneration を進めることで、
+   * 進行中ロードが復帰したあとに state やキャッシュを書き戻すのを無効化する。
+   */
+  function resetToLoginScreen() {
+    loadGeneration++;
+    resetLoading();
+    state.authenticated = false;
+    state.bookmarks = [];
+    state.filteredBookmarks = [];
+    state.collections = [];
+    state.selectedCollection = null;
+    state.searchQuery = "";
+    searchInput.value = "";
+    bookmarkList.innerHTML = "";
+    collectionName.textContent = "すべて";
+    showScreen(Screens.LOGIN);
+    return clearUserScopedStorage();
   }
 
   // ========== \u691c\u7d22\u30d5\u30a3\u30eb\u30bf ==========
@@ -357,10 +395,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
     collectionTree.appendChild(allItem);
 
-    for (const col of collections) {
-      collectionTree.appendChild(createCollectionItem(col, 0));
-      for (const child of col.children || []) {
-        collectionTree.appendChild(createCollectionItem(child, 1));
+    appendCollectionNodes(collections, 0);
+  }
+
+  /** 深さ優先で全世代を並べる (Raindrop は 3 階層以上のネストを許すため段数を固定しない) */
+  function appendCollectionNodes(nodes, depth) {
+    for (const col of nodes) {
+      collectionTree.appendChild(createCollectionItem(col, depth));
+      if (col.children?.length) {
+        appendCollectionNodes(col.children, depth + 1);
       }
     }
   }
@@ -416,6 +459,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const res = await sendMessage({ action: Actions.LOGIN });
       if (res?.ok) {
         state.authenticated = true;
+        // 別アカウントでログインし直した場合に前ユーザーの一覧・選択コレクションを持ち越さない
+        await clearUserScopedStorage();
+        state.selectedCollection = null;
+        collectionName.textContent = "すべて";
         showScreen(Screens.MAIN);
         loadBookmarks(true);
       } else {
@@ -451,7 +498,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.collections = res.collections;
       renderCollectionTree(res.collections);
     } else if (res?.error === "unauthorized") {
-      showScreen(Screens.LOGIN);
+      await resetToLoginScreen();
     } else {
       collectionTree.innerHTML = "";
       const err = document.createElement("div");
@@ -485,13 +532,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   btnLogout.addEventListener("click", async () => {
     await sendMessage({ action: Actions.LOGOUT });
-    state.authenticated = false;
-    state.bookmarks = [];
-    state.filteredBookmarks = [];
-    state.collections = [];
-    bookmarkList.innerHTML = "";
-    await chrome.storage.local.remove([StorageKeys.BOOKMARKS_CACHE]);
-    showScreen(Screens.LOGIN);
+    await resetToLoginScreen();
   });
 
   // ========== \u521d\u671f\u5316 ==========

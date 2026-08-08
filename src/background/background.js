@@ -88,11 +88,15 @@ async function refreshAccessToken(refreshToken) {
     });
 
     if (!res.ok) {
-      // 4xx \u306f\u30c8\u30fc\u30af\u30f3\u5931\u52b9\u3068\u307f\u306a\u3057\u3066\u30af\u30ea\u30a2
-      if (res.status >= 400 && res.status < 500) {
+      // 4xx \u306f\u30c8\u30fc\u30af\u30f3\u5931\u52b9\u3068\u307f\u306a\u3057\u3066\u30af\u30ea\u30a2 (OAuth 2.0 \u306e invalid_grant \u306f RFC 6749 \u00a75.2 \u3067
+      // HTTP 400 \u306a\u306e\u3067\u3001401/403 \u3060\u3051\u306b\u7d5e\u308b\u3068\u672c\u5f53\u306e\u5931\u52b9\u3067\u30c8\u30fc\u30af\u30f3\u304c\u6b8b\u308a\u7d9a\u3051\u3066\u3057\u307e\u3046)\u3002
+      // \u305f\u3060\u3057 429 (\u30ec\u30fc\u30c8\u5236\u9650) / 408 (\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8) \u306f\u4e00\u6642\u969c\u5bb3\u306a\u306e\u3067\u30c8\u30fc\u30af\u30f3\u3092\u6b8b\u3057\u3001
+      // \u518d\u8a66\u884c\u53ef\u80fd\u306a\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u7cfb\u30a8\u30e9\u30fc\u3068\u3057\u3066\u8fd4\u3059 (\u5f37\u5236\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3092\u9632\u3050)\u3002
+      const retryable = res.status === 429 || res.status === 408;
+      if (res.status >= 400 && res.status < 500 && !retryable) {
         await clearTokens();
       }
-      return { token: null, networkError: res.status >= 500 };
+      return { token: null, networkError: res.status >= 500 || retryable };
     }
 
     const json = await res.json();
@@ -243,30 +247,36 @@ async function fetchCollections() {
   const roots = rootRes.items || [];
   const children = childRes.items || [];
 
-  // \u89aa ID \u3054\u3068\u306b\u5b50\u3092\u30d0\u30b1\u30c3\u30c8\u5316\u3057\u3066 O(R+C) \u3067\u7a81\u5408
+  // \u89aa ID \u3054\u3068\u306b\u5b50\u3092\u30d0\u30b1\u30c3\u30c8\u5316\u3057\u3066 O(R+C) \u3067\u7a81\u5408\u3002
+  // /collections/childrens \u306f\u5b6b\u4ee5\u964d\u3082\u542b\u3080\u5168\u4e16\u4ee3\u3092\u8fd4\u3059\u305f\u3081\u3001childMap \u3082\u5168\u4e16\u4ee3\u3092\u4fdd\u6301\u3059\u308b\u3002
+  const nodeMap = new Map();
   const childMap = new Map();
   for (const c of children) {
     const pid = c.parent?.$id;
     if (pid == null) continue;
+    const node = { _id: c._id, title: c.title, count: c.count, children: [] };
+    nodeMap.set(c._id, node);
     if (!childMap.has(pid)) childMap.set(pid, []);
-    childMap.get(pid).push({
-      _id: c._id,
-      title: c.title,
-      count: c.count,
-      children: [],
-    });
+    childMap.get(pid).push(node);
   }
 
-  const tree = roots
-    .map((col) => ({
+  const sortByTitle = (list) =>
+    list.sort((a, b) => collator.compare(a.title, b.title));
+
+  // \u5404\u30ce\u30fc\u30c9\u3078\u81ea\u5206\u306e\u5b50\u3092\u63a5\u7d9a\u3059\u308b\u3002childMap \u306f\u5168\u4e16\u4ee3\u3092\u6301\u3064\u306e\u3067 1 \u30d1\u30b9\u3067\u591a\u6bb5\u306e\u6728\u304c\u5b8c\u6210\u3057\u3001
+  // 3 \u968e\u5c64\u4ee5\u4e0a\u306e\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3082\u30eb\u30fc\u30c8\u914d\u4e0b\u304b\u3089\u5230\u9054\u3067\u304d\u308b (\u518d\u5e30\u306f\u4e0d\u8981)\u3002
+  for (const node of nodeMap.values()) {
+    node.children = sortByTitle(childMap.get(node._id) || []);
+  }
+
+  const tree = sortByTitle(
+    roots.map((col) => ({
       _id: col._id,
       title: col.title,
       count: col.count,
-      children: (childMap.get(col._id) || []).sort((a, b) =>
-        collator.compare(a.title, b.title),
-      ),
-    }))
-    .sort((a, b) => collator.compare(a.title, b.title));
+      children: sortByTitle(childMap.get(col._id) || []),
+    })),
+  );
 
   return { collections: tree };
 }
