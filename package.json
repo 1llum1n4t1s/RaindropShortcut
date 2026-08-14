@@ -4,6 +4,7 @@
   "type": "commonjs",
   "description": "Chrome extension to quickly access Raindrop.io bookmarks",
   "scripts": {
+    "test": "node --test",
     "generate-icons": "node scripts/generate-icons.js",
     "generate-screenshots": "node webstore/generate-screenshots.js",
     "build": "pnpm run generate-icons && pnpm run generate-screenshots"

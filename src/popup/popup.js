@@ -14,8 +14,6 @@ const state = {
   searchQuery: "",
 };
 
-const collator = new Intl.Collator("ja");
-
 // ========== \u30d8\u30eb\u30d1\u30fc ==========
 
 function debounce(fn, ms) {
@@ -209,11 +207,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const collectionId = state.selectedCollection?._id || 0;
 
-    // 1\u30da\u30fc\u30b8\u76ee\u3067\u7dcf\u4ef6\u6570\u3092\u53d6\u5f97\u3057\u3066\u6b8b\u30da\u30fc\u30b8\u3092\u4e26\u5217\u53d6\u5f97\u3059\u308b\u3002
-    const first = await sendMessage({
+    // background \u5074\u3067\u5168\u30da\u30fc\u30b8\u53d6\u5f97\u3068\u30ad\u30e3\u30c3\u30b7\u30e5\u66f4\u65b0\u3092\u4e00\u5143\u5316\u3059\u308b\u3002
+    const result = await sendMessage({
       action: Actions.GET_BOOKMARKS,
       collectionId,
-      page: 0,
     });
 
     if (currentGen !== loadGeneration) {
@@ -221,55 +218,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    if (!handleBookmarkError(first, !reset)) return;
-
-    let all = (first.items || []).map(normalize);
-    const totalCount = typeof first.count === "number" ? first.count : all.length;
-    const totalPages = Math.max(1, Math.ceil(totalCount / SharedConfig.PER_PAGE));
-
-    // \u6b8b\u30da\u30fc\u30b8\u3092\u4e26\u5217\u53d6\u5f97 (\u4e26\u5217\u5ea6\u306f rate limit \u914d\u616e\u3067 6 \u306b\u6291\u3048\u308b)
-    const remaining = [];
-    for (let p = 1; p < totalPages; p++) remaining.push(p);
-
-    const CONCURRENCY = 6;
-    for (let i = 0; i < remaining.length; i += CONCURRENCY) {
-      const chunk = remaining.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(
-        chunk.map((p) =>
-          sendMessage({ action: Actions.GET_BOOKMARKS, collectionId, page: p }),
-        ),
-      );
-
-      if (currentGen !== loadGeneration) {
-        resetLoading();
-        return;
-      }
-
-      for (const res of results) {
-        if (!handleBookmarkError(res, !reset)) return;
-        all = all.concat((res.items || []).map(normalize));
-      }
-
-      // \u4e2d\u9593\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0 (\u30bd\u30fc\u30c8\u306f\u6700\u7d42\u306e 1 \u56de\u306b\u96c6\u7d04\u3057\u3066 O(n\u00b2 log n) \u3092\u56de\u907f)
-      // \u30ad\u30e3\u30c3\u30b7\u30e5\u66f4\u65b0\u7d4c\u7531 (reset=false) \u3067\u306f\u4e2d\u9593\u30ec\u30f3\u30c0\u30fc\u3092\u3057\u306a\u3044 (\u4e00\u89a7\u306e\u30c1\u30e9\u3064\u304d\u56de\u907f)
-      if (reset) {
-        state.bookmarks = all;
-        if (state.searchQuery) {
-          const prevScroll = listContainer.scrollTop;
-          applyFilter();
-          listContainer.scrollTop = prevScroll;
-        } else {
-          // \u5168\u518d\u69cb\u7bc9\u3060\u3068\u7d2f\u7a4d\u30ce\u30fc\u30c9\u751f\u6210\u304c O(n\u00b2/\u30c1\u30e3\u30f3\u30af) \u306b\u306a\u308b\u305f\u3081\u3001\u65b0\u7740\u5206\u3060\u3051\u8ffd\u8a18\u3059\u308b
-          state.filteredBookmarks = all;
-          emptyMessage.hidden = true;
-          const fragment = document.createDocumentFragment();
-          for (let j = bookmarkList.childElementCount; j < all.length; j++) {
-            fragment.appendChild(createBookmarkItem(all[j], j, false));
-          }
-          bookmarkList.appendChild(fragment);
-        }
-      }
-    }
+    if (!handleBookmarkError(result, !reset)) return;
 
     // \u30ed\u30b0\u30a2\u30a6\u30c8\u3084 401 \u3067 generation \u304c\u9032\u3093\u3067\u3044\u305f\u3089\u3001state \u3082\u30ad\u30e3\u30c3\u30b7\u30e5\u3082\u66f8\u304d\u623b\u3055\u306a\u3044
     if (currentGen !== loadGeneration) {
@@ -277,26 +226,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
-    all.sort((a, b) => collator.compare(a.title, b.title));
-    state.bookmarks = all;
+    state.bookmarks = (result.items || []).map(normalize);
 
     resetLoading();
     rerender();
-
-    // \u30ad\u30e3\u30c3\u30b7\u30e5\u66f4\u65b0 (\u6a19\u6e96\u306e\u300c\u3059\u3079\u3066\u300d\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u306e\u307f)
-    if (!state.selectedCollection) {
-      chrome.storage.local.set({
-        [StorageKeys.BOOKMARKS_CACHE]: {
-          savedAt: Date.now(),
-          items: all.map(({ _id, title, link, domain }) => ({
-            _id,
-            title,
-            link,
-            domain,
-          })),
-        },
-      });
-    }
   }
 
   /**
@@ -558,22 +491,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.authenticated = true;
     showScreen(Screens.MAIN);
 
-    // \u30ad\u30e3\u30c3\u30b7\u30e5\u304c\u65b0\u3057\u3051\u308c\u3070\u5373\u5ea7\u306b\u8868\u793a (\u300c\u3059\u3079\u3066\u300d\u9078\u629e\u6642\u306e\u307f)
+    // \u9078\u629e\u4e2d\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u306e\u30ad\u30e3\u30c3\u30b7\u30e5\u304c\u3042\u308c\u3070\u5373\u5ea7\u306b\u8868\u793a\u3059\u308b\u3002
+    // background \u304c\u5b9a\u671f\u66f4\u65b0\u3059\u308b\u305f\u3081\u3001popup \u306f\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u5f85\u3061\u3092\u3057\u306a\u3044\u3002
     const cache = stored[StorageKeys.BOOKMARKS_CACHE];
-    const cacheFresh =
-      !state.selectedCollection &&
+    const selectedCollectionId = state.selectedCollection?._id || 0;
+    const cacheMatchesSelection =
       cache &&
-      typeof cache.savedAt === "number" &&
-      Date.now() - cache.savedAt < SharedConfig.BOOKMARKS_CACHE_TTL_MS &&
+      cache.collectionId === selectedCollectionId &&
       Array.isArray(cache.items);
 
-    if (cacheFresh) {
+    if (cacheMatchesSelection) {
       state.bookmarks = cache.items.map(normalize);
       state.filteredBookmarks = state.bookmarks;
       // \u30ad\u30e3\u30c3\u30b7\u30e5\u521d\u56de\u8868\u793a\u306f\u300c\u521d\u3081\u3066\u898b\u305b\u308b\u300d\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3
       renderBookmarks(state.filteredBookmarks, true);
-      // \u30d0\u30c3\u30af\u30b0\u30e9\u30a6\u30f3\u30c9\u3067\u5dee\u5206\u66f4\u65b0 (animate=false \u3067\u4e8c\u91cd\u30d5\u30a7\u30fc\u30c9\u3092\u56de\u907f)
-      loadBookmarks(false);
     } else {
       loadBookmarks(true);
     }

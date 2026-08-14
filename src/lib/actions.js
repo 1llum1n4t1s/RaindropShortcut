@@ -23,7 +23,8 @@ const SharedConfig = Object.freeze({
   PER_PAGE: 50,
   FAVICON_SIZE: 16,
   SEARCH_DEBOUNCE_MS: 200,
-  BOOKMARKS_CACHE_TTL_MS: 5 * 60 * 1000,
+  BOOKMARKS_FETCH_CONCURRENCY: 6,
+  BOOKMARKS_REFRESH_INTERVAL_MINUTES: 5,
 });
 
 /** @readonly \u30c8\u30fc\u30af\u30f3\u95a2\u9023\u306e StorageKey \u7fa4 (save/clear \u3067\u5171\u901a) */

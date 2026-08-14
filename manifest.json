@@ -22,6 +22,7 @@
     "service_worker": "src/background/background.js"
   },
   "permissions": [
+    "alarms",
     "identity",
     "storage"
   ],

@@ -10,6 +10,7 @@ Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io 
 
 ```bash
 pnpm run build                 # アイコン PNG + ストア画像を一括生成
+pnpm test                      # Node.js 組み込みテストを実行
 pnpm run generate-icons        # icons/icon.svg → icons/icon-{16,48,128}.png (sharp)
 pnpm run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (puppeteer)
 ```
@@ -20,7 +21,7 @@ powershell -ExecutionPolicy Bypass -File zip.ps1   # raindrop-shortcut.zip を�
 bash zip.sh                                        # 同等 (bash 版)
 ```
 
-テストフレームワーク・リンターは未導入。動作確認は `chrome://extensions` に拡張機能を読み込んで手動テスト。
+テストは Node.js 組み込みの `node:test` を使用。ブラウザ統合の最終動作確認は `chrome://extensions` に拡張機能を読み込んで手動テスト。
 
 ## Source Layout
 
@@ -71,16 +72,16 @@ src/lib/actions.js = 共有定数
 | `LOGIN` | popup→bg | OAuth フロー開始 (state パラメータで CSRF 防御) |
 | `LOGOUT` | popup→bg | トークン削除 |
 | `GET_COLLECTIONS` | popup→bg | コレクション一覧取得 (ルート + 子ツリー) |
-| `GET_BOOKMARKS` | popup→bg | ブックマーク取得 (ページ指定、count 付きで返却) |
+| `GET_BOOKMARKS` | popup→bg | 選択コレクションの全ブックマーク取得 + キャッシュ更新 |
 
 `onMessage` リスナーは `sender.id === chrome.runtime.id` のメッセージのみ処理し、それ以外（外部拡張からのメッセージ）は無視する (セッション破壊防止)。
 
 ### Popup
 3画面構成 (ログイン / メイン / 設定)。画面切替は各 `<div class="screen">` の `hidden` 属性を切り替えるだけ。メイン画面はヘッダー、検索バー、ブックマーク一覧。クリックで設定に応じて新しいタブ / 現在のタブで開く。
 
-**ブックマーク読み込み**: 初回の 1 ページで `count` を取得 → 残ページを並列 fetch (concurrency=6) → 最終ソートは 1 回だけ (`Intl.Collator("ja")`)。検索フィルタ用に正規化済み `_titleLower` / `_domainLower` を付加しておき、filter 内の `toLowerCase()` 呼び出しを回避。
+**ブックマーク読み込み**: background が初回の 1 ページで `count` を取得 → 残ページを並列 fetch (concurrency=6) → 最終ソートは 1 回だけ (`Intl.Collator("ja")`)。popup は完成済み一覧を受け取り、検索フィルタ用に正規化済み `_titleLower` / `_domainLower` を付加して filter 内の `toLowerCase()` 呼び出しを回避。
 
-**ローカルキャッシュ**: 「すべて」選択時は `chrome.storage.local` にブックマーク一覧を保存 (TTL 5 分)。popup 再表示時はキャッシュから即時レンダリングし、バックグラウンドで差分更新。
+**ローカルキャッシュ**: 選択中コレクション ID とブックマーク一覧を `chrome.storage.local` に保存。background はブラウザ起動時、コレクション変更時、5 分間隔の `chrome.alarms` で事前更新する。popup 再表示時は選択 ID が一致するキャッシュを即時レンダリングし、ネットワーク取得を待たない。
 
 ### Background
 Service Worker。OAuth 2.0 フロー (`chrome.identity.launchWebAuthFlow` + state 検証)、アクセストークン管理 (期限5分前に自動リフレッシュ、`refreshPromise` による Promise coalescing で並行競合回避)、Raindrop.io API 呼び出し (`apiFetch` で Authorization ヘッダー自動付与)。`fetchWithTimeout()` で全 fetch に `AbortSignal.timeout(15s)` を付与。
@@ -103,7 +104,7 @@ chrome.storage.local:
   selectedCollection - { _id, title } | null
   themeMode          - "auto" | "light" | "dark"
   linkOpenMode       - "newTab" | "current"
-  bookmarksCache    - { savedAt, items[] } (「すべて」選択時のみ、TTL 5分)
+  bookmarksCache    - { collectionId, savedAt, items[] } (選択中コレクション、5分ごとに更新)
 ```
 
 ## Important Patterns
@@ -114,8 +115,8 @@ chrome.storage.local:
 - **Promise coalescing によるトークン更新競合回避** — `refreshPromise` モジュール変数で並行リフレッシュを単一化。
 - **コレクション階層は2段階** — ルート (`/collections`) + 子 (`/collections/childrens`) を並行取得し `Map<parent.$id, []>` で O(R+C) 突合。
 - **検索はローカルフィルタ** — `_titleLower` / `_domainLower` を事前計算し毎回の `toLowerCase()` を回避。
-- **並列ページ取得** — `fetchBookmarks` が返す `count` から総ページ数を算出し `Promise.all` + concurrency=6 で並列取得。
-- **中間レンダリングは `reset=true` のときのみ** — キャッシュ経由のリフレッシュ (`reset=false`) では最終結果のみ描画してチラつきを防止。
+- **並列ページ取得** — background の `fetchAllBookmarks` が `count` から総ページ数を算出し `Promise.all` + concurrency=6 で並列取得。
+- **事前取得と定期更新** — browser 起動・コレクション変更・5分間隔の alarm で選択中コレクションを更新。同じコレクションへの並行取得は Promise coalescing で単一化。
 - **loadGeneration カウンタ** — コレクション切り替え時に古い非同期ロードをキャンセル。生成番号が変わったら即 `resetLoading()` して return。
 - **handler() の catch** — `chrome.runtime.onMessage` の非同期 handler は `.catch(e => sendResponse({ error: e.message }))` で reject 時も必ず応答。
 - **favicon は Google Favicon Service** — `FAVICON_SIZE` 定数で URL と DOM 属性を一元化。プライバシーポリシーに開示済。

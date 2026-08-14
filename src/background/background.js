@@ -281,7 +281,7 @@ async function fetchCollections() {
   return { collections: tree };
 }
 
-/** \u30da\u30fc\u30b8\u6307\u5b9a\u306e\u30d6\u30c3\u30af\u30de\u30fc\u30af\u53d6\u5f97\u3002count \u3092\u8fd4\u3059\u306e\u3067 popup \u5074\u304c\u6b8b\u30da\u30fc\u30b8\u3092\u4e26\u5217\u53d6\u5f97\u3067\u304d\u308b\u3002 */
+/** \u30da\u30fc\u30b8\u6307\u5b9a\u306e\u30d6\u30c3\u30af\u30de\u30fc\u30af\u53d6\u5f97\u3002 */
 async function fetchBookmarks(collectionId, page = 0) {
   const id = collectionId || 0;
   const res = await apiFetch(
@@ -300,6 +300,160 @@ async function fetchBookmarks(collectionId, page = 0) {
     count: typeof res.count === "number" ? res.count : null,
   };
 }
+
+/**
+ * 指定コレクションの全ページを取得する。
+ * Raindrop.io への同時リクエスト数を抑えるため、並列度 6 で処理する。
+ */
+async function fetchAllBookmarks(collectionId) {
+  const first = await fetchBookmarks(collectionId, 0);
+  if (first.error) return first;
+
+  let items = first.items || [];
+  const totalCount = typeof first.count === "number" ? first.count : items.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / SharedConfig.PER_PAGE));
+
+  for (
+    let start = 1;
+    start < totalPages;
+    start += SharedConfig.BOOKMARKS_FETCH_CONCURRENCY
+  ) {
+    const end = Math.min(
+      start + SharedConfig.BOOKMARKS_FETCH_CONCURRENCY,
+      totalPages,
+    );
+    const pages = [];
+    for (let page = start; page < end; page++) {
+      pages.push(fetchBookmarks(collectionId, page));
+    }
+
+    const results = await Promise.all(pages);
+    for (const result of results) {
+      if (result.error) return result;
+      items = items.concat(result.items || []);
+    }
+  }
+
+  items.sort((a, b) => collator.compare(a.title, b.title));
+  return { items };
+}
+
+// ========== ブックマークの事前取得・定期更新 ==========
+
+const BOOKMARKS_REFRESH_ALARM = "bookmarks-cache-refresh";
+const cacheRefreshPromises = new Map();
+
+function getSelectedCollectionId(selectedCollection) {
+  return selectedCollection?._id || 0;
+}
+
+/**
+ * 同じコレクションへの並行取得を 1 本へまとめ、取得対象が現在も選択中ならキャッシュする。
+ * 選択変更中に古い取得が完了しても、新しいコレクションのキャッシュを上書きしない。
+ */
+function refreshBookmarksCache(collectionId) {
+  const id = collectionId || 0;
+  const inFlight = cacheRefreshPromises.get(id);
+  if (inFlight) return inFlight;
+
+  const refresh = (async () => {
+    const result = await fetchAllBookmarks(id);
+    if (result.error) return result;
+
+    const stored = await chrome.storage.local.get(StorageKeys.SELECTED_COLLECTION);
+    const currentId = getSelectedCollectionId(
+      stored[StorageKeys.SELECTED_COLLECTION],
+    );
+
+    if (currentId === id) {
+      try {
+        await chrome.storage.local.set({
+          [StorageKeys.BOOKMARKS_CACHE]: {
+            collectionId: id,
+            savedAt: Date.now(),
+            items: result.items,
+          },
+        });
+      } catch {
+        // 容量上限などでキャッシュできなくても、取得済み一覧は popup へ返す。
+      }
+    }
+
+    return result;
+  })().finally(() => {
+    cacheRefreshPromises.delete(id);
+  });
+
+  cacheRefreshPromises.set(id, refresh);
+  return refresh;
+}
+
+async function refreshSelectedBookmarksCache() {
+  const stored = await chrome.storage.local.get(StorageKeys.SELECTED_COLLECTION);
+  return refreshBookmarksCache(
+    getSelectedCollectionId(stored[StorageKeys.SELECTED_COLLECTION]),
+  );
+}
+
+function getAlarm(name) {
+  return new Promise((resolve, reject) => {
+    chrome.alarms.get(name, (alarm) => {
+      const error = chrome.runtime.lastError;
+      if (error) {
+        reject(new Error(error.message));
+      } else {
+        resolve(alarm);
+      }
+    });
+  });
+}
+
+async function ensureBookmarksRefreshAlarm() {
+  const existing = await getAlarm(BOOKMARKS_REFRESH_ALARM);
+  if (
+    !existing ||
+    existing.periodInMinutes !== SharedConfig.BOOKMARKS_REFRESH_INTERVAL_MINUTES
+  ) {
+    chrome.alarms.create(BOOKMARKS_REFRESH_ALARM, {
+      delayInMinutes: SharedConfig.BOOKMARKS_REFRESH_INTERVAL_MINUTES,
+      periodInMinutes: SharedConfig.BOOKMARKS_REFRESH_INTERVAL_MINUTES,
+    });
+  }
+}
+
+function runBackgroundRefresh() {
+  refreshSelectedBookmarksCache().catch(() => {
+    // ネットワーク断などでは既存キャッシュを維持し、次回の定期更新に任せる。
+  });
+}
+
+chrome.runtime.onInstalled.addListener(() => {
+  ensureBookmarksRefreshAlarm().catch(() => {});
+  runBackgroundRefresh();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  ensureBookmarksRefreshAlarm().catch(() => {});
+  runBackgroundRefresh();
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === BOOKMARKS_REFRESH_ALARM) {
+    runBackgroundRefresh();
+  }
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (
+    areaName === "local" &&
+    Object.hasOwn(changes, StorageKeys.SELECTED_COLLECTION)
+  ) {
+    runBackgroundRefresh();
+  }
+});
+
+// Firefox の alarm はブラウザ再起動で消えるため、background 起動ごとに存在を確認する。
+ensureBookmarksRefreshAlarm().catch(() => {});
 
 // ========== \u30e1\u30c3\u30bb\u30fc\u30b8\u30cf\u30f3\u30c9\u30e9 ==========
 
@@ -333,7 +487,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
 
       case Actions.GET_BOOKMARKS: {
-        return fetchBookmarks(request.collectionId, request.page);
+        return refreshBookmarksCache(request.collectionId);
       }
 
       default:
