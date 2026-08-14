@@ -3,3 +3,8 @@ allowBuilds:
   puppeteer: true
   sharp: true
   spawn-sync: true
+
+# 検証済みの更新だけ、公開直後 24 時間の待機対象から版指定で除外する。
+minimumReleaseAgeExclude:
+  - puppeteer@25.7.0
+  - puppeteer-core@25.7.0
