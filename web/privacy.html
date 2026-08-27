@@ -25,14 +25,14 @@
 
   <main id="main" class="legal section-shell">
     <h1>プライバシー<br>ポリシー</h1>
-    <p class="legal-lead">最終更新日: 2026年4月18日</p>
+    <p class="legal-lead">最終更新日: 2026年8月27日</p>
       <section>
         <h2>はじめに</h2>
         <p>「Raindrop Shortcut」（以下「本拡張機能」）は、ユーザーのプライバシーを尊重し、個人情報の保護に努めます。本プライバシーポリシーは、本拡張機能におけるデータの取り扱いについて説明します。</p>
       </section>
       <section>
         <h2>収集するデータ</h2>
-        <p>本拡張機能は、個人情報を一切収集しません。</p>
+        <p>本拡張機能は、個人情報を自動的に収集することはありません。メールアドレスとお名前は、利用者がお問い合わせフォームに入力して送信したときだけ受け取ります（「お問い合わせフォーム」の項を参照）。</p>
       </section>
       <section>
         <h2>ローカルに保存するデータ</h2>
@@ -48,7 +48,7 @@
       </section>
       <section>
         <h2>データの共有</h2>
-        <p>本拡張機能は、いかなるデータも第三者と共有しません。</p>
+        <p>本拡張機能は、いかなるデータも第三者と共有しません。お問い合わせの内容は開発者（Kagayoi）のサポート窓口が受け取るもので、広告・解析目的の第三者へ渡すことはありません。</p>
       </section>
       <section>
         <h2>ネットワーク通信</h2>
@@ -59,13 +59,23 @@
           <li><strong>www.google.com (Favicon Service)</strong> — ブックマーク一覧に表示する favicon 画像の取得のため、各ブックマークのドメイン名のみを送信します。ブックマーク自体のタイトル・URL・その他の個人識別情報は送信しません。</li>
           <li><strong>fonts.googleapis.com / fonts.gstatic.com (Google Fonts)</strong> — ポップアップ UI のフォント (IBM Plex Sans JP / IBM Plex Mono) を取得するため、ブラウザがフォント定義 CSS とフォントファイル (woff2) を読み込みます。ユーザーのブックマーク情報は送信しません。フォントは初回取得後ブラウザキャッシュされます。</li>
         </ul>
-        <p>上記以外のサーバーとの通信は一切行いません。</p>
+        <p>上記に加えて、下記のお問い合わせフォームを送信したときだけ <code>support.kagayoi.com</code> と通信します。これら以外のサーバーとの通信は一切行いません。</p>
+      </section>
+      <section>
+        <h2>お問い合わせフォーム</h2>
+        <p>設定画面の「お問い合わせ」ボタンから送信したときだけ、次の情報を Kagayoi Support（<code>https://support.kagayoi.com</code>）へ送信します。ボタンを押さない限り、この通信は発生しません。</p>
+        <ul>
+          <li>入力されたメールアドレス、お名前（任意）、問い合わせ種別、件名、本文</li>
+          <li>製品ID、拡張機能のバージョン、ロケール</li>
+        </ul>
+        <p>初回はメールで届く6桁の確認コードを Kagayoi Support へ送信して本人確認します。認証後の問い合わせと返信は、利用者本人とサポート担当者が確認できるよう Kagayoi Support に保存します。ブックマーク、コレクション情報、Raindrop.io の認証トークンは送信しません。</p>
       </section>
       <section>
         <h2>権限の使用目的</h2>
         <ul>
           <li><strong>identity</strong>: Raindrop.io の OAuth 2.0 認証フローを実行するために使用します。</li>
           <li><strong>storage</strong>: 認証トークン、コレクション選択、テーマ設定、リンク設定、ブックマークキャッシュをローカルに保存・復元するために使用します。</li>
+          <li><strong>host_permissions (support.kagayoi.com)</strong>: お問い合わせのメール確認、送信、受付結果の取得を行うために使用します。フォームを送信しない限り通信は発生しません。</li>
           <li><strong>host_permissions (api.raindrop.io, raindrop.io)</strong>: Raindrop.io の公式 API からブックマーク・コレクション情報を取得し、OAuth 認証のトークン交換を行うために使用します。</li>
         </ul>
       </section>
