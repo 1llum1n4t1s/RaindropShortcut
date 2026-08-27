@@ -28,14 +28,15 @@
   ],
   "host_permissions": [
     "https://api.raindrop.io/*",
-    "https://raindrop.io/*"
+    "https://raindrop.io/*",
+    "https://support.kagayoi.com/*"
   ],
   "browser_specific_settings": {
     "gecko": {
       "id": "{37d6aac9-e947-4a4b-982d-f9945e41b234}",
       "strict_min_version": "128.0",
       "data_collection_permissions": {
-        "required": ["none"]
+        "required": ["personallyIdentifyingInfo", "authenticationInfo"]
       }
     }
   }

@@ -926,3 +926,15 @@ body::after {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── お問い合わせ / 評価 ──────────────────────────────────────────
+   Kagayoi.Support の共通部品 <kagayoi-support-footer> が描画する。
+   ここは置き場所と配色の受け渡しだけを持つ。 */
+.support-footer { margin-top: 4px; }
+
+kagayoi-support-footer {
+  --kgs-surface: var(--paper-card);
+  --kgs-surface-hover: var(--paper-soft);
+  --kgs-border: var(--rule-bold);
+  --kgs-accent: var(--accent);
+}
