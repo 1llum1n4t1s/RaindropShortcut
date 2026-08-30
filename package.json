@@ -1,9 +1,11 @@
 {
   "name": "raindrop-shortcut",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "type": "commonjs",
   "description": "Chrome extension to quickly access Raindrop.io bookmarks",
   "scripts": {
+    "sync:support": "node --preserve-symlinks-main ./node_modules/kagayoi-support-extension/bin/kagayoi-support-sync.mjs",
+    "prebuild": "pnpm sync:support",
     "test": "node --test",
     "generate-icons": "node scripts/generate-icons.js",
     "generate-screenshots": "node webstore/generate-screenshots.js",
@@ -11,9 +13,11 @@
   },
   "devDependencies": {
     "chrome-webstore-upload-cli": "^4.0.1",
-    "puppeteer": "^25.8.0",
-    "sharp": "^0.35.3",
-    "web-ext": "10.6.0"
+    "kagayoi-support-extension": "1.0.4",
+    "puppeteer": "^25.9.0",
+    "sharp": "^0.35.4",
+    "web-ext": "10.6.0",
+    "wrangler": "4.127.1"
   },
   "keywords": [
     "chrome-extension",

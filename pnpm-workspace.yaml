@@ -1,10 +1,13 @@
 # postinstall でネイティブビルドが必要な依存を明示許可（pnpm v10.12+ はここで管理）
 allowBuilds:
+  esbuild: true
   puppeteer: true
   sharp: true
   spawn-sync: true
+  workerd: true
 
 # 検証済みの更新だけ、公開直後 24 時間の待機対象から版指定で除外する。
 minimumReleaseAgeExclude:
   - puppeteer@25.7.0
   - puppeteer-core@25.7.0
+  - kagayoi-support-extension@1.0.4
