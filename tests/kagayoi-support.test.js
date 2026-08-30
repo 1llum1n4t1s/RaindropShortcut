@@ -25,6 +25,7 @@ test("設定画面へ共通のサポートフッターを組み込んでいる",
   const html = read(SETTINGS_HTML);
 
   assert.match(html, new RegExp(`<kagayoi-support-footer[^>]+product-id="${PRODUCT_ID}"`));
+  assert.match(html, /<kagayoi-support-footer[^>]+firefox-data-consent/);
   assert.match(html, /<script type="module" src="[^"]*shared\/kagayoi-support-popup\.js"><\/script>/);
   assert.match(html, /<script type="module" src="[^"]*shared\/kagayoi-support-footer\.js"><\/script>/);
   assert.ok(
@@ -38,6 +39,8 @@ test("同梱した共通部品が正本の契約を満たす", () => {
   const footerJs = read("src/shared/kagayoi-support-footer.js");
 
   assert.match(popupJs, /const DEFAULT_API_BASE = "https:\/\/support\.kagayoi\.com"/);
+  assert.match(popupJs, /const API_TIMEOUT_MS = 15_000/);
+  assert.match(popupJs, /data_collection: FIREFOX_OPTIONAL_CONTACT_DATA_PERMISSIONS/);
   assert.match(popupJs, /this\.form\.setAttribute\("channel", "extension"\)/);
   assert.match(popupJs, /this\.form\.setAttribute\("storage", "local"\)/);
   assert.match(popupJs, /customElements\.define\("kagayoi-contact-popup", KagayoiContactPopup\)/);
@@ -71,15 +74,18 @@ test("manifest が問い合わせ先ホストへの権限を持つ", () => {
 
 test("Firefox 版が問い合わせで送るデータを AMO へ申告している", () => {
   // 問い合わせフォームはメールアドレス（personallyIdentifyingInfo）と
-  // 確認コード（authenticationInfo）を送る。利用者が自分で入力した値も申告対象で、
-  // "none" は他の値と併記できない。
+  // 確認コード（authenticationInfo）を常に送る。問い合わせ本文
+  // （personalCommunications）は送信直前に許可を求め、"none" は他の値と併記できない。
   for (const manifestPath of ["manifest.json", "manifest.firefox.json"]) {
     const gecko = manifestAt(manifestPath)?.browser_specific_settings?.gecko;
     if (!gecko) continue;
-    const declared = gecko.data_collection_permissions?.required ?? [];
+    const permissions = gecko.data_collection_permissions ?? {};
+    const required = permissions.required ?? [];
+    const optional = permissions.optional ?? [];
     for (const category of ["personallyIdentifyingInfo", "authenticationInfo"]) {
-      assert.ok(declared.includes(category), `${manifestPath} の申告に ${category} が要る`);
+      assert.ok(required.includes(category), `${manifestPath} の必須申告に ${category} が要る`);
     }
-    assert.equal(declared.includes("none"), false, `${manifestPath}: "none" は併記できない`);
+    assert.ok(optional.includes("personalCommunications"), `${manifestPath} の任意申告に personalCommunications が要る`);
+    assert.equal([...required, ...optional].includes("none"), false, `${manifestPath}: "none" は併記できない`);
   }
 });

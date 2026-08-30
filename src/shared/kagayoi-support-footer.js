@@ -5,8 +5,8 @@
  * 全拡張で同じ組み込み方にするための部品で、拡張側では次の 3 行だけを書く。
  *
  *   <kagayoi-support-footer product-id="my-extension" product-name="拡張機能名"></kagayoi-support-footer>
- *   <script src="../shared/kagayoi-support-popup.js" defer></script>
- *   <script src="../shared/kagayoi-support-footer.js" defer></script>
+ *   <script type="module" src="../shared/kagayoi-support-popup.js"></script>
+ *   <script type="module" src="../shared/kagayoi-support-footer.js"></script>
  *
  * このファイルは Kagayoi.Support が正本。拡張側へは逐語コピーで同梱し、拡張ごとに改変しない
  * （改変すると「作り方が全拡張で同じ」が崩れ、正本の修正が配れなくなる）。
@@ -28,54 +28,24 @@
     ja: { contact: "お問い合わせ", rate: "評価をお願いします！" },
     en: { contact: "Contact support", rate: "Please rate us!" },
   }
+  const STYLESHEET_URL = bundledStylesheetUrl("kagayoi-support-footer.css")
 
-  const STYLE = `
-    :host {
-      --kgs-gap: 8px;
-      --kgs-radius: 10px;
-      --kgs-star: #f5b301;
-      --kgs-surface: rgba(128, 128, 128, 0.10);
-      --kgs-surface-hover: rgba(128, 128, 128, 0.18);
-      --kgs-border: rgba(128, 128, 128, 0.32);
-      display: block;
-      color: inherit;
-      font: inherit;
-    }
-    :host([hidden]) { display: none !important; }
-    *, *::before, *::after { box-sizing: border-box; }
-    [hidden] { display: none !important; }
-    .stack { display: grid; gap: var(--kgs-gap); }
-    .item {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 100%;
-      min-height: 40px;
-      padding: 10px 14px;
-      border: 1px solid var(--kgs-border);
-      border-radius: var(--kgs-radius);
-      background: var(--kgs-surface);
-      color: inherit;
-      font: inherit;
-      font-weight: 700;
-      line-height: 1.4;
-      text-align: center;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .item:hover { background: var(--kgs-surface-hover); }
-    .item:active { transform: translateY(1px); }
-    .item:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-    .rate { justify-content: space-between; text-align: left; }
-    .stars { flex: none; color: var(--kgs-star); font-size: 1.15em; letter-spacing: 0.04em; }
-    /* hide-trigger 付きでも inline-block は行ボックスを作るので、フローから外して余白を出さない。
-       アクセント色は拡張側の --accent / --primary を優先し、無ければ問い合わせフォームの既定に戻す。 */
-    kagayoi-contact-popup {
-      position: absolute;
-      --ks-accent: var(--kgs-accent, var(--accent, var(--primary, #006fee)));
-    }
-  `
+  function bundledStylesheetUrl(fileName) {
+    const api = extensionApi()
+    if (api) return api.runtime.getURL(`src/shared/${fileName}`)
+
+    const script = Array.from(document.scripts).find(({ src }) =>
+      /(?:^|\/)kagayoi-support-footer\.js(?:[?#]|$)/.test(src),
+    )
+    return new URL(fileName, script?.src || document.baseURI).href
+  }
+
+  function replaceShadowContent(shadowRoot, ...nodes) {
+    const stylesheet = document.createElement("link")
+    stylesheet.rel = "stylesheet"
+    stylesheet.href = STYLESHEET_URL
+    shadowRoot.replaceChildren(stylesheet, ...nodes)
+  }
 
   /** Chrome は chrome.*、Firefox は browser.*。拡張ページ以外（プレビュー等）では null。 */
   function extensionApi() {
@@ -155,9 +125,6 @@
         return
       }
 
-      const style = document.createElement("style")
-      style.textContent = STYLE
-
       const stack = document.createElement("div")
       stack.className = "stack"
 
@@ -167,7 +134,7 @@
         if (rate) stack.append(rate)
       }
 
-      this.shadowRoot.replaceChildren(style, stack)
+      replaceShadowContent(this.shadowRoot, stack)
       if (!stack.childElementCount) this.hidden = true
     }
 
@@ -189,6 +156,7 @@
         const value = this.getAttribute(attribute)?.trim()
         if (value) this.popup.setAttribute(attribute, value)
       }
+      if (this.hasAttribute("firefox-data-consent")) this.popup.setAttribute("firefox-data-consent", "")
       const version = this.getAttribute("app-version")?.trim() || api.runtime.getManifest?.().version
       if (version) this.popup.setAttribute("app-version", version)
 
@@ -202,7 +170,7 @@
         }
         // それでも来なければ（kagayoi-support-popup.js の同梱漏れ）操作不能にはせず、Web の窓口を開く。
         if (typeof this.popup.open === "function") {
-          this.popup.open()
+          this.popup.open(button)
         } else if (api.tabs?.create) {
           api.tabs.create({ url: SUPPORT_SITE })
         } else {

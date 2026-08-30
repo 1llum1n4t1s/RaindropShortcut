@@ -3,6 +3,10 @@
 
   const DEFAULT_API_BASE = "https://support.kagayoi.com"
   const SESSION_KEY = "kagayoi-support-session"
+  const API_TIMEOUT_MS = 15_000
+  const FORM_STYLESHEET_URL = bundledStylesheetUrl("kagayoi-support-form.css")
+  const POPUP_STYLESHEET_URL = bundledStylesheetUrl("kagayoi-support-popup.css")
+  const FIREFOX_OPTIONAL_CONTACT_DATA_PERMISSIONS = ["personalCommunications"]
   const CHANNELS = new Set(["web", "desktop", "extension", "other"])
   const STORAGE_SCOPES = new Set(["session", "local"])
   const CATEGORIES = [
@@ -28,26 +32,27 @@
     "origin not allowed": "このサイトからは現在送信できません。",
   }
 
-  function adoptShadowStyles(shadowRoot) {
-    const style = shadowRoot.querySelector("style")
-    if (!style || typeof CSSStyleSheet !== "function") return
-    try {
-      const sheet = new CSSStyleSheet()
-      sheet.replaceSync(style.textContent)
-      shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, sheet]
-      style.remove()
-    } catch {
-      // Older browsers keep using the inline shadow style as a fallback.
-    }
+  function bundledStylesheetUrl(fileName) {
+    const api = typeof browser !== "undefined" ? browser : typeof chrome !== "undefined" ? chrome : null
+    if (api?.runtime?.getURL) return api.runtime.getURL(`src/shared/${fileName}`)
+
+    const script = Array.from(document.scripts).find(({ src }) =>
+      /(?:^|\/)(?:contact-form|kagayoi-support-popup)\.js(?:[?#]|$)/.test(src),
+    )
+    return new URL(fileName, script?.src || document.baseURI).href
   }
 
   // shadow DOM の中身は innerHTML 代入で組まない。このファイルは Chrome 拡張へ同梱する正本で、
   // AMO の静的解析が innerHTML 代入を UNSAFE_VAR_ASSIGNMENT として弾き、拡張側リポジトリにも
   // 「innerHTML 不使用」の契約があるため。テンプレートは静的文字列のみで、利用者入力は通さない。
-  function replaceShadowContent(shadowRoot, markup) {
+  function replaceShadowContent(shadowRoot, stylesheetUrl, markup) {
     const parsed = new DOMParser().parseFromString(markup, "text/html")
-    const styles = [...parsed.head.querySelectorAll("style")]
-    shadowRoot.replaceChildren(...styles, ...parsed.body.childNodes)
+    const stylesheet = document.createElement("link")
+    stylesheet.rel = "stylesheet"
+    stylesheet.href = stylesheetUrl
+    // MV3 の style-src 'self' では、style要素もConstructable StylesheetのCSS文字列もinline扱いになる。
+    // 同梱した外部CSSだけを読み込み、Shadow DOMへinline styleを一度も入れない。
+    shadowRoot.replaceChildren(stylesheet, ...parsed.body.childNodes)
   }
 
   let instanceCount = 0
@@ -81,107 +86,7 @@
 
     render() {
       const id = this.instanceId
-      replaceShadowContent(this.shadowRoot, `
-        <style>
-          :host {
-            --ks-accent: var(--accent, var(--primary, #006fee));
-            --ks-surface: var(--panel, var(--surface, #ffffff));
-            --ks-surface-soft: var(--panel-2, var(--content2, rgba(127, 127, 127, 0.08)));
-            --ks-border: var(--line, var(--border, rgba(127, 127, 127, 0.28)));
-            --ks-text: var(--ink, var(--fg, inherit));
-            --ks-muted: var(--muted, #62626b);
-            display: block;
-            color: var(--ks-text);
-            font: inherit;
-            line-height: 1.7;
-          }
-          *, *::before, *::after { box-sizing: border-box; }
-          [hidden] { display: none !important; }
-          .panel {
-            padding: clamp(1rem, 3vw, 1.5rem);
-            border: 1px solid var(--ks-border);
-            border-radius: 16px;
-            background-color: var(--ks-surface);
-          }
-          .intro { margin: 0 0 1.25rem; color: var(--ks-muted); font-size: 0.9rem; }
-          .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-          .field { display: grid; gap: 0.4rem; min-width: 0; }
-          .field--full { grid-column: 1 / -1; }
-          label, legend { text-align: left; font-weight: 600; font-size: 0.88rem; }
-          .optional { color: var(--ks-muted); font-size: 0.76rem; font-weight: 400; }
-          input, select, textarea, button { font: inherit; }
-          input, select, textarea {
-            width: 100%;
-            min-height: 44px;
-            padding: 0.68rem 0.78rem;
-            border: 1px solid var(--ks-border);
-            border-radius: 10px;
-            background-color: var(--ks-surface);
-            color: var(--ks-text);
-          }
-          textarea { min-height: 10rem; resize: vertical; }
-          input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
-            outline: 3px solid color-mix(in srgb, var(--ks-accent) 35%, transparent);
-            outline-offset: 2px;
-          }
-          .verification {
-            grid-column: 1 / -1;
-            display: grid;
-            grid-template-columns: minmax(0, 14rem) 1fr;
-            align-items: end;
-            gap: 0.8rem;
-            padding: 1rem;
-            border: 1px solid var(--ks-border);
-            border-radius: 12px;
-            background-color: var(--ks-surface-soft);
-          }
-          .verification p { align-self: center; margin: 0; color: var(--ks-muted); font-size: 0.82rem; }
-          .resend {
-            justify-self: start;
-            padding: 0;
-            border: 0;
-            background-color: transparent;
-            color: var(--ks-accent);
-            cursor: pointer;
-            text-decoration: underline;
-            text-underline-offset: 0.18em;
-          }
-          .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; margin-top: 1.15rem; }
-          .submit, .again {
-            min-height: 46px;
-            padding: 0.72rem 1.15rem;
-            border: 1px solid var(--ks-accent);
-            border-radius: 999px;
-            background-color: var(--ks-accent);
-            color: #ffffff;
-            font-weight: 700;
-            cursor: pointer;
-          }
-          .submit:disabled, .again:disabled, .resend:disabled { cursor: wait; opacity: 0.62; }
-          .auth-note { margin: 0; color: var(--ks-muted); font-size: 0.8rem; }
-          .status { min-height: 1.7em; margin: 0.8rem 0 0; font-size: 0.86rem; }
-          .status[data-kind="error"] { color: #c62828; }
-          .status[data-kind="success"] { color: #19743b; }
-          .success {
-            padding: clamp(1.2rem, 4vw, 2rem);
-            border: 1px solid var(--ks-border);
-            border-radius: 16px;
-            background-color: var(--ks-surface);
-            text-align: center;
-          }
-          .success h2 { margin: 0 0 0.55rem; font-size: 1.35rem; }
-          .success p { margin: 0.45rem 0; color: var(--ks-muted); }
-          .reference { color: var(--ks-text) !important; font-weight: 700; letter-spacing: 0.05em; }
-          .success a { color: var(--ks-accent); }
-          .again { margin-top: 0.8rem; }
-          .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-          @media (max-width: 620px) {
-            .grid, .verification { grid-template-columns: 1fr; }
-            .field--full { grid-column: auto; }
-            .submit { width: 100%; }
-          }
-          @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
-        </style>
+      replaceShadowContent(this.shadowRoot, FORM_STYLESHEET_URL, `
         <form class="panel" novalidate aria-label="お問い合わせフォーム">
           <p class="intro"><strong class="product-name"></strong>について、不具合・ご質問・ご要望・ご依頼を送信できます。返信先の確認のため、初回はメールで届く6桁のコードを入力してください。</p>
           <div class="grid">
@@ -207,10 +112,6 @@
               <label for="${id}-description">お問い合わせ内容</label>
               <textarea id="${id}-description" name="description" maxlength="10000" required></textarea>
             </div>
-            <div class="trap" aria-hidden="true">
-              <label for="${id}-website">ウェブサイト</label>
-              <input id="${id}-website" name="website" type="text" tabindex="-1" autocomplete="off">
-            </div>
             <div class="verification" hidden>
               <div class="field">
                 <label for="${id}-code">6桁の確認コード</label>
@@ -233,7 +134,6 @@
           <button class="again" type="button">別のお問い合わせを送る</button>
         </section>
       `)
-      adoptShadowStyles(this.shadowRoot)
       this.form = this.shadowRoot.querySelector("form")
       this.success = this.shadowRoot.querySelector(".success")
       this.email = this.form.elements.email
@@ -263,10 +163,7 @@
     async handleSubmit() {
       if (this.busy || !this.productId) return
       if (!this.validateTicketFields()) return
-      if (this.form.elements.website.value) {
-        this.showSuccess("KGS-RECEIVED")
-        return
-      }
+      if (!await this.ensureDataCollectionConsent()) return
       const session = this.sessionForCurrentEmail()
       if (session) {
         await this.createTicket(session.accessToken)
@@ -280,7 +177,7 @@
         await this.verifyAndCreate()
         return
       }
-      await this.requestCode()
+      await this.requestCode(true)
     }
 
     validateTicketFields() {
@@ -293,11 +190,12 @@
       return true
     }
 
-    async requestCode() {
+    async requestCode(consentChecked = false) {
       if (this.busy || !this.email.checkValidity()) {
         if (!this.email.checkValidity()) this.email.reportValidity()
         return
       }
+      if (!consentChecked && !await this.ensureDataCollectionConsent()) return
       const email = this.normalizedEmail()
       await this.runBusy(async () => {
         const data = await this.api("/api/auth/request", { method: "POST", body: { email } })
@@ -347,6 +245,29 @@
       else await action()
     }
 
+    async ensureDataCollectionConsent() {
+      if (!this.hasAttribute("firefox-data-consent")) return true
+      const api = globalThis.browser ?? globalThis.chrome
+      let extensionOrigin = ""
+      try {
+        extensionOrigin = api?.runtime?.getURL?.("") || ""
+      } catch {}
+      if (!extensionOrigin.startsWith("moz-extension://")) return true
+
+      try {
+        // submit / resend の user-activated handler 内で最初の非同期 API として呼ぶ。
+        // 既に許可済みなら Firefox はプロンプトなしで true を返す。
+        const granted = await api.permissions.request({
+          data_collection: FIREFOX_OPTIONAL_CONTACT_DATA_PERMISSIONS,
+        })
+        if (granted) return true
+        this.setStatus("お問い合わせ情報の送信には Firefox の許可が必要です。", "error")
+      } catch {
+        this.setStatus("Firefox のデータ送信許可を確認できませんでした。", "error")
+      }
+      return false
+    }
+
     async api(path, options) {
       const headers = { "Content-Type": "application/json" }
       if (options.token) headers.Authorization = `Bearer ${options.token}`
@@ -357,6 +278,7 @@
           credentials: "omit",
           headers,
           body: JSON.stringify(options.body),
+          signal: AbortSignal.timeout(API_TIMEOUT_MS),
         })
       } catch {
         throw new Error("network")
@@ -498,6 +420,124 @@
   }
 
   let popupCount = 0
+  let documentScrollLockCount = 0
+  let documentScrollRestore = []
+  let documentScrollPosition = { left: 0, top: 0 }
+
+  function rememberInlineStyles(element, properties) {
+    return {
+      element,
+      properties: properties.map((property) => ({
+        property,
+        value: element.style.getPropertyValue(property),
+        priority: element.style.getPropertyPriority(property),
+      })),
+    }
+  }
+
+  function applyLockedStyles(element, styles) {
+    for (const [property, value] of Object.entries(styles)) {
+      element.style.setProperty(property, value, "important")
+    }
+  }
+
+  function lockDocumentScroll() {
+    const root = document.documentElement
+    const body = document.body
+    if (!root || !body) return
+    documentScrollLockCount += 1
+    if (documentScrollLockCount !== 1) return
+
+    const viewportWidth = Math.max(1, window.innerWidth || root.clientWidth || body.clientWidth || 1)
+    const viewportHeight = Math.max(1, window.innerHeight || root.clientHeight || body.clientHeight || 1)
+    const lockedWidth = `${viewportWidth}px`
+    const lockedHeight = `${viewportHeight}px`
+    documentScrollPosition = {
+      left: Number.isFinite(window.scrollX) ? window.scrollX : 0,
+      top: Number.isFinite(window.scrollY) ? window.scrollY : 0,
+    }
+    documentScrollRestore = [
+      rememberInlineStyles(root, [
+        "overflow",
+        "width",
+        "min-width",
+        "max-width",
+        "height",
+        "min-height",
+        "max-height",
+        "scrollbar-width",
+        "scrollbar-color",
+      ]),
+      rememberInlineStyles(body, [
+        "overflow",
+        "position",
+        "top",
+        "right",
+        "left",
+        "width",
+        "min-width",
+        "max-width",
+        "height",
+        "min-height",
+        "max-height",
+        "scrollbar-width",
+        "scrollbar-color",
+      ]),
+    ]
+
+    // Chrome の action popup は documentElement.scrollHeight が上限 (600px) を超えると、
+    // overflow:hidden でもブラウザ側の外スクロールバーを強制する。現在の viewport 寸法へ
+    // レイアウト自体を固定し、body を通常フローから外すことで dialog の1本だけにする。
+    // fixed body の幅解決は Chromium のビルド差があるため、左右位置だけでなく pixel 幅も固定する。
+    applyLockedStyles(root, {
+      overflow: "hidden",
+      width: lockedWidth,
+      "min-width": lockedWidth,
+      "max-width": lockedWidth,
+      height: lockedHeight,
+      "min-height": lockedHeight,
+      "max-height": lockedHeight,
+      "scrollbar-width": "none",
+      "scrollbar-color": "transparent transparent",
+    })
+    applyLockedStyles(body, {
+      overflow: "hidden",
+      position: "fixed",
+      top: "0",
+      right: "0",
+      left: "0",
+      width: lockedWidth,
+      "min-width": lockedWidth,
+      "max-width": lockedWidth,
+      height: lockedHeight,
+      "min-height": lockedHeight,
+      "max-height": lockedHeight,
+      "scrollbar-width": "none",
+      "scrollbar-color": "transparent transparent",
+    })
+  }
+
+  function unlockDocumentScroll() {
+    if (documentScrollLockCount === 0) return
+    documentScrollLockCount -= 1
+    if (documentScrollLockCount !== 0) return
+
+    for (const { element, properties } of documentScrollRestore) {
+      for (const { property, value, priority } of properties) {
+        if (value) element.style.setProperty(property, value, priority)
+        else element.style.removeProperty(property)
+      }
+    }
+    documentScrollRestore = []
+    if (documentScrollPosition.left || documentScrollPosition.top) {
+      try {
+        window.scrollTo(documentScrollPosition.left, documentScrollPosition.top)
+      } catch {
+        // Embedded or hardened contexts can reject programmatic scrolling.
+      }
+    }
+    documentScrollPosition = { left: 0, top: 0 }
+  }
 
   class KagayoiContactPopup extends HTMLElement {
     constructor() {
@@ -508,87 +548,7 @@
     connectedCallback() {
       if (this.shadowRoot.childElementCount) return
       const popupId = `kagayoi-support-popup-${++popupCount}`
-      replaceShadowContent(this.shadowRoot, `
-        <style>
-          :host {
-            --ksp-accent: var(--ks-accent, var(--accent, var(--primary, #006fee)));
-            --ksp-surface: var(--ks-surface, var(--panel, var(--surface, #ffffff)));
-            --ksp-border: var(--ks-border, var(--line, var(--border, rgba(127, 127, 127, 0.28))));
-            --ksp-text: var(--ks-text, var(--ink, var(--fg, #202124)));
-            display: inline-block;
-            color: var(--ksp-text);
-            font: inherit;
-          }
-          *, *::before, *::after { box-sizing: border-box; }
-          [hidden] { display: none !important; }
-          .trigger {
-            min-height: 40px;
-            padding: 0.58rem 1rem;
-            border: 1px solid var(--ksp-accent);
-            border-radius: 999px;
-            background: var(--ksp-accent);
-            color: #ffffff;
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-          }
-          .trigger:focus-visible, .close:focus-visible {
-            outline: 3px solid color-mix(in srgb, var(--ksp-accent) 35%, transparent);
-            outline-offset: 2px;
-          }
-          dialog {
-            width: min(720px, calc(100vw - 1.5rem));
-            max-width: none;
-            max-height: calc(100vh - 1.5rem);
-            padding: 0;
-            border: 1px solid var(--ksp-border);
-            border-radius: 18px;
-            background: var(--ksp-surface);
-            color: var(--ksp-text);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
-            overflow: auto;
-          }
-          dialog::backdrop { background: rgba(0, 0, 0, 0.52); }
-          .shell { min-width: 0; }
-          .header {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.9rem 1rem;
-            border-bottom: 1px solid var(--ksp-border);
-            background: var(--ksp-surface);
-          }
-          .title { margin: 0; font-size: 1.05rem; }
-          .close {
-            width: 38px;
-            height: 38px;
-            padding: 0;
-            border: 1px solid var(--ksp-border);
-            border-radius: 999px;
-            background: transparent;
-            color: inherit;
-            font: inherit;
-            font-size: 1.25rem;
-            line-height: 1;
-            cursor: pointer;
-          }
-          kagayoi-contact-form {
-            display: block;
-            padding: 1rem;
-            --ks-accent: var(--ksp-accent);
-            --ks-surface: transparent;
-            --ks-border: var(--ksp-border);
-            --ks-text: var(--ksp-text);
-          }
-          @media (max-width: 620px) {
-            dialog { width: calc(100vw - 0.75rem); max-height: calc(100vh - 0.75rem); }
-            kagayoi-contact-form { padding: 0.65rem; }
-          }
-        </style>
+      replaceShadowContent(this.shadowRoot, POPUP_STYLESHEET_URL, `
         <button class="trigger" type="button" aria-haspopup="dialog" aria-controls="${popupId}">お問い合わせ</button>
         <dialog id="${popupId}" aria-labelledby="${popupId}-title">
           <div class="shell">
@@ -600,7 +560,6 @@
           </div>
         </dialog>
       `)
-      adoptShadowStyles(this.shadowRoot)
       this.trigger = this.shadowRoot.querySelector(".trigger")
       this.dialog = this.shadowRoot.querySelector("dialog")
       this.form = document.createElement("kagayoi-contact-form")
@@ -609,7 +568,7 @@
       this.trigger.textContent = this.getAttribute("button-label")?.trim() || "お問い合わせ"
       this.trigger.hidden = this.hasAttribute("hide-trigger")
       this.shadowRoot.querySelector(".title").textContent = this.getAttribute("dialog-title")?.trim() || "お問い合わせ"
-      for (const name of ["product-id", "product-name", "api-base", "app-version", "os-version", "locale", "diagnostics"]) {
+      for (const name of ["product-id", "product-name", "api-base", "app-version", "os-version", "locale", "diagnostics", "firefox-data-consent"]) {
         if (this.hasAttribute(name)) this.form.setAttribute(name, this.getAttribute(name))
       }
       this.shadowRoot.querySelector(".form-host").append(this.form)
@@ -618,13 +577,31 @@
       this.dialog.addEventListener("click", (event) => {
         if (event.target === this.dialog) this.close()
       })
-      if (this.hasAttribute("open")) queueMicrotask(() => this.open())
+      this.dialog.addEventListener("close", () => {
+        this.finishClose()
+      })
+      if (this.hasAttribute("open")) {
+        queueMicrotask(() => {
+          if (this.isConnected) this.open()
+        })
+      }
     }
 
-    open() {
-      if (!this.dialog || this.dialog.open) return
-      if (typeof this.dialog.showModal === "function") this.dialog.showModal()
-      else this.dialog.setAttribute("open", "")
+    disconnectedCallback() {
+      this.releaseDocumentScrollLock()
+    }
+
+    open(returnFocusTo = this.trigger) {
+      if (!this.isConnected || !this.dialog || this.dialog.open) return
+      this.returnFocusTo = returnFocusTo
+      this.acquireDocumentScrollLock()
+      try {
+        if (typeof this.dialog.showModal === "function") this.dialog.showModal()
+        else this.dialog.setAttribute("open", "")
+      } catch (error) {
+        this.releaseDocumentScrollLock()
+        throw error
+      }
       queueMicrotask(() => this.form?.shadowRoot?.querySelector('input[name="email"]')?.focus())
     }
 
@@ -632,7 +609,31 @@
       if (!this.dialog?.open) return
       if (typeof this.dialog.close === "function") this.dialog.close()
       else this.dialog.removeAttribute("open")
-      this.trigger?.focus()
+      this.finishClose()
+    }
+
+    finishClose() {
+      if (!this.documentScrollLocked) return
+      this.releaseDocumentScrollLock()
+      this.restoreFocus()
+    }
+
+    restoreFocus() {
+      const target = this.returnFocusTo?.isConnected ? this.returnFocusTo : this.trigger
+      target?.focus()
+      this.returnFocusTo = this.trigger
+    }
+
+    acquireDocumentScrollLock() {
+      if (this.documentScrollLocked) return
+      this.documentScrollLocked = true
+      lockDocumentScroll()
+    }
+
+    releaseDocumentScrollLock() {
+      if (!this.documentScrollLocked) return
+      this.documentScrollLocked = false
+      unlockDocumentScroll()
     }
   }
 

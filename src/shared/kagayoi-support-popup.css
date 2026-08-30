@@ -1,0 +1,85 @@
+:host {
+  --ksp-accent: var(--ks-accent, var(--kgs-accent, var(--accent, var(--primary, #006fee))));
+  --ksp-surface: var(--ks-surface, var(--kgs-surface, var(--panel, var(--surface, Canvas))));
+  --ksp-surface-soft: var(--ks-surface-soft, var(--kgs-surface-hover, var(--panel-2, var(--content2, rgba(127, 127, 127, 0.08)))));
+  --ksp-border: var(--ks-border, var(--kgs-border, var(--line, var(--border, rgba(127, 127, 127, 0.28)))));
+  --ksp-text: var(--ks-text, var(--kgs-text, var(--ink, var(--fg, CanvasText))));
+  --ksp-muted: var(--ks-muted, var(--kgs-muted, var(--muted, color-mix(in srgb, currentColor 68%, transparent))));
+  display: inline-block;
+  color-scheme: var(--kgs-color-scheme, inherit);
+  color: var(--ksp-text);
+  font: inherit;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+.trigger {
+  min-height: 40px;
+  padding: 0.58rem 1rem;
+  border: 1px solid var(--ksp-accent);
+  border-radius: 999px;
+  background: var(--ksp-accent);
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.trigger:focus-visible, .close:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ksp-accent) 35%, transparent);
+  outline-offset: 2px;
+}
+dialog {
+  width: min(720px, calc(100vw - 1.5rem));
+  max-width: none;
+  max-height: calc(100vh - 1.5rem);
+  padding: 0;
+  border: 1px solid var(--ksp-border);
+  border-radius: 18px;
+  background: var(--ksp-surface);
+  color: var(--ksp-text);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.28);
+  overflow: auto;
+  scrollbar-color: color-mix(in srgb, var(--ksp-text) 42%, transparent) transparent;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.52); }
+.shell { min-width: 0; }
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--ksp-border);
+  background: var(--ksp-surface);
+}
+.title { margin: 0; font-size: 1.05rem; }
+.close {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--ksp-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+kagayoi-contact-form {
+  display: block;
+  padding: 1rem;
+  --ks-accent: var(--ksp-accent);
+  --ks-surface: transparent;
+  --ks-option-surface: var(--ksp-surface);
+  --ks-surface-soft: var(--ksp-surface-soft);
+  --ks-border: var(--ksp-border);
+  --ks-text: var(--ksp-text);
+  --ks-muted: var(--ksp-muted);
+}
+@media (max-width: 620px) {
+  dialog { width: calc(100vw - 0.75rem); max-height: calc(100vh - 0.75rem); }
+  kagayoi-contact-form { padding: 0.65rem; }
+}

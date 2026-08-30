@@ -25,7 +25,7 @@
 
   <main id="main" class="legal section-shell">
     <h1>プライバシー<br>ポリシー</h1>
-    <p class="legal-lead">最終更新日: 2026年8月27日</p>
+    <p class="legal-lead">最終更新日: 2026年8月30日</p>
       <section>
         <h2>はじめに</h2>
         <p>「Raindrop Shortcut」（以下「本拡張機能」）は、ユーザーのプライバシーを尊重し、個人情報の保護に努めます。本プライバシーポリシーは、本拡張機能におけるデータの取り扱いについて説明します。</p>
@@ -36,7 +36,8 @@
       </section>
       <section>
         <h2>ローカルに保存するデータ</h2>
-        <p>本拡張機能は、以下の設定データをユーザーの端末内（<code>chrome.storage.local</code>）にのみ保存します。</p>
+        <p>本拡張機能は、以下のデータをユーザーの端末内に保存します。</p>
+        <p><code>chrome.storage.local</code>:</p>
         <ul>
           <li>OAuth アクセストークン・リフレッシュトークン（Raindrop.io との認証用）</li>
           <li>選択中のコレクション情報</li>
@@ -44,11 +45,15 @@
           <li>リンクの開き方設定（新しいタブ / 現在のタブ）</li>
           <li>ブックマーク一覧のローカルキャッシュ（popup 再表示の高速化目的、TTL 5 分）</li>
         </ul>
-        <p>これらのデータは端末内にのみ保存され、Raindrop.io 以外の外部サーバーへの送信は一切行いません。</p>
+        <p><code>window.localStorage</code>（キー <code>kagayoi-support-session</code>）:</p>
+        <ul>
+          <li>お問い合わせ用のメールアドレス、Kagayoi Support のアクセストークン、有効期限</li>
+        </ul>
+        <p>Raindrop.io の OAuth トークンとブックマーク・コレクション情報は、同サービスの認証・API 通信にのみ使用します。ブックマークのドメイン名だけは、下記のとおり favicon 取得時に Google Favicon Service へ送信します。お問い合わせセッションはブラウザ再起動後も返信確認に使えるよう保存し、有効期限切れまたは Kagayoi Support が認証を拒否したときに削除します。Raindrop.io からのログアウトでは、別サービスの認証情報であるお問い合わせセッションは削除しません。</p>
       </section>
       <section>
         <h2>データの共有</h2>
-        <p>本拡張機能は、いかなるデータも第三者と共有しません。お問い合わせの内容は開発者（Kagayoi）のサポート窓口が受け取るもので、広告・解析目的の第三者へ渡すことはありません。</p>
+        <p>本拡張機能は、データを販売せず、広告・解析・信用力判定の目的で使用または第三者へ共有しません。favicon 取得時のドメイン名の送信先は Google Favicon Service です。お問い合わせの内容は開発者（Kagayoi）のサポート窓口だけが受け取り、問い合わせ対応にのみ使用します。</p>
       </section>
       <section>
         <h2>ネットワーク通信</h2>
@@ -75,6 +80,7 @@
         <ul>
           <li><strong>identity</strong>: Raindrop.io の OAuth 2.0 認証フローを実行するために使用します。</li>
           <li><strong>storage</strong>: 認証トークン、コレクション選択、テーマ設定、リンク設定、ブックマークキャッシュをローカルに保存・復元するために使用します。</li>
+          <li><strong>alarms</strong>: 選択中コレクションのブックマークキャッシュを5分間隔で更新するために使用します。</li>
           <li><strong>host_permissions (support.kagayoi.com)</strong>: お問い合わせのメール確認、送信、受付結果の取得を行うために使用します。フォームを送信しない限り通信は発生しません。</li>
           <li><strong>host_permissions (api.raindrop.io, raindrop.io)</strong>: Raindrop.io の公式 API からブックマーク・コレクション情報を取得し、OAuth 認証のトークン交換を行うために使用します。</li>
         </ul>

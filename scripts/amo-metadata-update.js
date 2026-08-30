@@ -16,7 +16,9 @@
 // locale コードは BCP 47 厳密 (en は 400 拒否、en-US を使う)
 
 const crypto = require("crypto");
+const { readFileSync } = require("fs");
 const https = require("https");
+const { resolve } = require("path");
 
 const ISS = process.env.AMO_JWT_ISSUER;
 const SECRET = process.env.AMO_JWT_SECRET;
@@ -32,6 +34,10 @@ if (!ISS || !SECRET) {
 const REPO_URL = "https://github.com/1llum1n4t1s/RaindropShortcut";
 const PRIVACY_URL = `${REPO_URL}/blob/main/docs/privacy-policy.md`;
 const ISSUES_URL = `${REPO_URL}/issues`;
+const PRIVACY_POLICY_JA = readFileSync(
+  resolve(__dirname, "../docs/privacy-policy.md"),
+  "utf8",
+).trim();
 
 const NAME = {
   ja: "Raindrop Shortcuts",
@@ -61,7 +67,7 @@ const DESCRIPTION = {
     "### プライバシー",
     "",
     "- OAuth 2.0 認証なのでパスワード入力は不要",
-    "- 個人情報の外部送信は一切なし",
+    "- 個人情報は自動収集せず、お問い合わせ送信時だけ入力された連絡先と本文を Kagayoi Support へ送信",
     "- favicon 取得のためドメイン名のみ Google Favicon Service へ送信",
     "",
     `オープンソース ([MIT License](${REPO_URL}))`,
@@ -81,7 +87,7 @@ const DESCRIPTION = {
     "### Privacy",
     "",
     "- OAuth 2.0 authentication, no password needed",
-    "- No personal data collected or sent externally",
+    "- No automatic collection of personal data; contact details and messages are sent to Kagayoi Support only when you submit the contact form",
     "- Only the domain name is sent to Google Favicon Service for favicon rendering",
     "",
     `Open source ([MIT License](${REPO_URL}))`,
@@ -89,40 +95,11 @@ const DESCRIPTION = {
 };
 
 const PRIVACY_POLICY = {
-  ja: [
-    "# Raindrop Shortcut プライバシーポリシー",
-    "",
-    "本拡張機能は個人情報を一切収集しません。",
-    "",
-    "## ローカルに保存するデータ",
-    "",
-    "- OAuth アクセストークン／リフレッシュトークン（Raindrop.io 認証用）",
-    "- 選択中のコレクション情報",
-    "- テーマ設定（自動／ライト／ダーク）",
-    "- リンクの開き方設定",
-    "- ブックマーク一覧のローカルキャッシュ（TTL 5 分）",
-    "",
-    "これらは端末内にのみ保存され、Raindrop.io 以外の外部サーバーへの送信は一切ありません。",
-    "",
-    "## ネットワーク通信",
-    "",
-    "- **raindrop.io** — OAuth 認証",
-    "- **api.raindrop.io** — ブックマーク取得",
-    "- **www.google.com** — ブックマークのドメイン名のみ送信（favicon 取得用）",
-    "- **fonts.googleapis.com / fonts.gstatic.com** — ポップアップ UI のフォント取得（ユーザーデータは送信しません）",
-    "",
-    "## 権限の使用目的",
-    "",
-    "- **identity**: Raindrop.io の OAuth 認証",
-    "- **storage**: 設定・キャッシュのローカル保存",
-    "- **host_permissions (api.raindrop.io, raindrop.io)**: API 通信",
-    "",
-    `詳細: ${PRIVACY_URL}`,
-  ].join("\n"),
+  ja: PRIVACY_POLICY_JA,
   "en-US": [
     "# Raindrop Shortcut Privacy Policy",
     "",
-    "This extension does not collect any personal information.",
+    "This extension does not automatically collect personal information. It receives an email address and optional name only when a user enters them and submits the contact form.",
     "",
     "## Data stored locally",
     "",
@@ -131,8 +108,13 @@ const PRIVACY_POLICY = {
     "- Theme preference (auto / light / dark)",
     "- Link open mode preference",
     "- Bookmark list local cache (TTL 5 minutes)",
+    "- Kagayoi Support contact session in window.localStorage (email address, support access token, and expiration)",
     "",
-    "All data is stored on your device only and never transmitted to any external server other than Raindrop.io.",
+    "These values are stored locally. OAuth tokens and bookmark or collection data are used only for Raindrop.io authentication and API communication. Only bookmark domain names are sent to Google Favicon Service as described below. The contact session persists across browser restarts for checking replies and is removed when it expires or Kagayoi Support rejects it. Logging out of Raindrop.io does not remove this separate support session.",
+    "",
+    "## Data sharing",
+    "",
+    "Data is not sold or used or shared for advertising, analytics, or creditworthiness. Google Favicon Service receives bookmark domain names for favicon retrieval. Contact submissions are received only by Kagayoi Support and used only to respond to the inquiry.",
     "",
     "## Network communication",
     "",
@@ -140,12 +122,19 @@ const PRIVACY_POLICY = {
     "- **api.raindrop.io** — bookmark retrieval",
     "- **www.google.com** — only the domain name is sent for favicon retrieval",
     "- **fonts.googleapis.com / fonts.gstatic.com** — popup UI fonts (no user data sent)",
+    "- **support.kagayoi.com** — contacted only when the user submits the contact form",
+    "",
+    "## Contact form",
+    "",
+    "Only when the user submits the contact form, the extension sends the entered email address, optional name, inquiry category, subject, message, product ID, extension version, and locale to Kagayoi Support. It does not send bookmarks, collection data, or Raindrop.io authentication tokens.",
     "",
     "## Permission rationale",
     "",
     "- **identity**: Raindrop.io OAuth flow",
     "- **storage**: local storage of settings and cache",
+    "- **alarms**: refresh the selected collection's bookmark cache every five minutes",
     "- **host_permissions (api.raindrop.io, raindrop.io)**: API communication",
+    "- **host_permissions (support.kagayoi.com)**: email verification, contact submission, and retrieving the submission result after the user submits the form",
     "",
     `Details: ${PRIVACY_URL}`,
   ].join("\n"),

@@ -30,7 +30,7 @@ Raindrop.io のブックマークをツールバーからすばやく検索・�
 ## プライバシー
 
 - OAuth 2.0 認証を使用。パスワードを拡張機能に入力する必要はありません
-- 個人情報の収集・外部送信は一切行いません
+- 個人情報を自動収集しません。設定画面のお問い合わせフォームを送信した場合だけ、入力したメールアドレス・お名前（任意）・問い合わせ内容を Kagayoi Support へ送信します
 - favicon 画像取得のためにブックマークのドメイン名のみ Google Favicon Service へ送信します
 - ポップアップ UI の Web フォント (IBM Plex Sans JP / IBM Plex Mono) を Google Fonts CDN から取得します。オフライン時はシステムフォント (Yu Gothic UI / Hiragino Kaku Gothic ProN 等) にフォールバックします
 - 詳細は [プライバシーポリシー](docs/privacy-policy.md) をご覧ください
