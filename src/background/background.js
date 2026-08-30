@@ -48,33 +48,102 @@ async function getTokens() {
  * \u9032\u884c\u4e2d\u306e refresh \u3092 coalescing \u3057\u3001\u4e26\u884c\u547c\u3073\u51fa\u3057\u6642\u306b\u30c8\u30fc\u30af\u30f3\u304c\u4e8c\u91cd\u767a\u884c\u3055\u308c\u306a\u3044\u3088\u3046\u306b\u3059\u308b\u3002
  * Raindrop \u306e refresh token \u30ed\u30fc\u30c6\u30fc\u30b7\u30e7\u30f3\u3067\u65e7\u30c8\u30fc\u30af\u30f3\u304c\u7121\u52b9\u5316\u3055\u308c\u308b\u306e\u3092\u9632\u3050\u3002
  */
-let refreshPromise = null;
+let refreshPromise;
+let sessionGeneration = 0;
+/** @type {Promise<unknown>} */
+let storageMutationPromise = Promise.resolve();
 
-async function getValidToken() {
+function invalidateSessionWork() {
+  sessionGeneration += 1;
+  refreshPromise = null;
+  cacheRefreshPromises.clear();
+  return sessionGeneration;
+}
+
+/**
+ * @template T
+ * @param {() => Promise<T>} mutation
+ * @returns {Promise<T>}
+ */
+function queueStorageMutation(mutation) {
+  const queued = storageMutationPromise.then(mutation, mutation);
+  storageMutationPromise = queued.catch(() => {});
+  return queued;
+}
+
+/**
+ * @param {string} refreshToken
+ * @param {number} generation
+ * @returns {Promise<{ token: string | null, networkError?: boolean }>}
+ */
+function refreshTokenOnce(refreshToken, generation) {
+  if (generation !== sessionGeneration) {
+    return Promise.resolve({ token: null, networkError: false });
+  }
+
+  if (refreshPromise) return refreshPromise;
+
+  const pending = refreshAccessToken(refreshToken, generation).finally(() => {
+    if (refreshPromise === pending) refreshPromise = undefined;
+  });
+  refreshPromise = pending;
+  return pending;
+}
+
+/**
+ * @param {number} [expectedGeneration]
+ * @returns {Promise<{ token: string | null, networkError?: boolean, generation?: number }>}
+ */
+async function getValidToken(expectedGeneration = sessionGeneration) {
+  if (expectedGeneration !== sessionGeneration) {
+    return { token: null, networkError: false, generation: expectedGeneration };
+  }
+
   const data = await getTokens();
+  if (expectedGeneration !== sessionGeneration) {
+    return { token: null, networkError: false, generation: expectedGeneration };
+  }
+
   const token = data[StorageKeys.ACCESS_TOKEN];
   const refreshToken = data[StorageKeys.REFRESH_TOKEN];
   const expiry = data[StorageKeys.TOKEN_EXPIRY] || 0;
 
-  if (!token || !refreshToken) return { token: null };
-
-  if (Date.now() > expiry - OAuthConfig.REFRESH_THRESHOLD_MS) {
-    if (!refreshPromise) {
-      refreshPromise = refreshAccessToken(refreshToken).finally(() => {
-        refreshPromise = null;
-      });
-    }
-    return refreshPromise;
+  if (!token || !refreshToken) {
+    return { token: null, networkError: false, generation: expectedGeneration };
   }
 
-  return { token };
+  if (Date.now() > expiry - OAuthConfig.REFRESH_THRESHOLD_MS) {
+    const refreshed = await refreshTokenOnce(refreshToken, expectedGeneration);
+    if (expectedGeneration !== sessionGeneration) {
+      return { token: null, networkError: false, generation: expectedGeneration };
+    }
+
+    // 期限前の先行 refresh が一時的な通信障害で失敗した場合は、まだ有効な
+    // access token を使う。失効後や OAuth 4xx ではフォールバックしない。
+    if (!refreshed.token && refreshed.networkError && Date.now() < expiry) {
+      return { token, generation: expectedGeneration };
+    }
+
+    return {
+      token: refreshed.token,
+      networkError: refreshed.networkError || false,
+      generation: expectedGeneration,
+    };
+  }
+
+  return { token, generation: expectedGeneration };
 }
 
 /**
  * refresh \u5931\u6557\u3092 network \u969c\u5bb3 vs \u30c8\u30fc\u30af\u30f3\u5931\u52b9\u3067\u5206\u3051\u3066\u8fd4\u3059\u3002
  * \u5730\u4e0b\u9244\u3067\u4e00\u6642\u7684\u306b\u5708\u5916\u2192\u5f37\u5236\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3068\u3044\u3046\u8aa4\u4f5c\u52d5\u3092\u9632\u3050\u3002
  */
-async function refreshAccessToken(refreshToken) {
+/**
+ * @param {string} refreshToken
+ * @param {number} generation
+ * @returns {Promise<{ token: string | null, networkError?: boolean }>}
+ */
+async function refreshAccessToken(refreshToken, generation) {
   try {
     const res = await fetchWithTimeout(OAuthConfig.TOKEN_URL, {
       method: "POST",
@@ -87,6 +156,10 @@ async function refreshAccessToken(refreshToken) {
       }),
     });
 
+    if (generation !== sessionGeneration) {
+      return { token: null, networkError: false };
+    }
+
     if (!res.ok) {
       // 4xx \u306f\u30c8\u30fc\u30af\u30f3\u5931\u52b9\u3068\u307f\u306a\u3057\u3066\u30af\u30ea\u30a2 (OAuth 2.0 \u306e invalid_grant \u306f RFC 6749 \u00a75.2 \u3067
       // HTTP 400 \u306a\u306e\u3067\u3001401/403 \u3060\u3051\u306b\u7d5e\u308b\u3068\u672c\u5f53\u306e\u5931\u52b9\u3067\u30c8\u30fc\u30af\u30f3\u304c\u6b8b\u308a\u7d9a\u3051\u3066\u3057\u307e\u3046)\u3002
@@ -94,30 +167,64 @@ async function refreshAccessToken(refreshToken) {
       // \u518d\u8a66\u884c\u53ef\u80fd\u306a\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u7cfb\u30a8\u30e9\u30fc\u3068\u3057\u3066\u8fd4\u3059 (\u5f37\u5236\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3092\u9632\u3050)\u3002
       const retryable = res.status === 429 || res.status === 408;
       if (res.status >= 400 && res.status < 500 && !retryable) {
-        await clearTokens();
+        await clearTokens(generation);
       }
       return { token: null, networkError: res.status >= 500 || retryable };
     }
 
     const json = await res.json();
-    await saveTokens(json);
-    return { token: json.access_token };
+    const saved = await saveTokens(json, { generation });
+    return { token: saved ? json.access_token : null };
   } catch {
     // \u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u65ad\u2192\u30c8\u30fc\u30af\u30f3\u306f\u6d88\u3055\u305a\u6b21\u56de\u30ea\u30c8\u30e9\u30a4\u306b\u8cbb\u3084\u3059
     return { token: null, networkError: true };
   }
 }
 
-async function saveTokens({ access_token, refresh_token, expires_in }) {
-  await chrome.storage.local.set({
-    [StorageKeys.ACCESS_TOKEN]: access_token,
-    [StorageKeys.REFRESH_TOKEN]: refresh_token,
-    [StorageKeys.TOKEN_EXPIRY]: Date.now() + expires_in * 1000,
+/** @returns {Promise<boolean>} */
+async function saveTokens(
+  { access_token, refresh_token, expires_in },
+  { generation = sessionGeneration, clearUserData = false } = {},
+) {
+  await queueStorageMutation(async () => {
+    if (generation !== sessionGeneration) return;
+
+    if (clearUserData) {
+      await chrome.storage.local.remove([
+        StorageKeys.SELECTED_COLLECTION,
+        StorageKeys.BOOKMARKS_CACHE,
+      ]);
+      if (generation !== sessionGeneration) return;
+    }
+
+    await chrome.storage.local.set({
+      [StorageKeys.ACCESS_TOKEN]: access_token,
+      [StorageKeys.REFRESH_TOKEN]: refresh_token,
+      [StorageKeys.TOKEN_EXPIRY]: Date.now() + expires_in * 1000,
+    });
   });
+  return generation === sessionGeneration;
 }
 
-async function clearTokens() {
-  await chrome.storage.local.remove([...TokenStorageKeys]);
+/** @returns {Promise<boolean>} */
+async function establishSession(tokens) {
+  const generation = invalidateSessionWork();
+  return saveTokens(tokens, { generation, clearUserData: true });
+}
+
+async function clearTokens(expectedGeneration = sessionGeneration) {
+  if (expectedGeneration !== sessionGeneration) return false;
+  invalidateSessionWork();
+
+  // 認証が失効した利用者のブックマークを端末上に残さない。
+  await queueStorageMutation(() =>
+    chrome.storage.local.remove([
+      ...TokenStorageKeys,
+      StorageKeys.SELECTED_COLLECTION,
+      StorageKeys.BOOKMARKS_CACHE,
+    ]),
+  );
+  return true;
 }
 
 // ========== fetch \u30d8\u30eb\u30d1\u30fc (\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8\u4ed8\u304d) ==========
@@ -198,32 +305,78 @@ async function handleLogin() {
     }
     throw e;
   }
-  await saveTokens(json);
+  if (!(await establishSession(json))) {
+    throw new Error("認証状態が更新されたため、もう一度ログインしてください");
+  }
 }
 
 // ========== API \u30ec\u30a4\u30e4\u30fc ==========
 
-async function apiFetch(path, opts = {}) {
-  const { token, networkError } = await getValidToken();
+/**
+ * @param {string} path
+ * @param {any} [opts]
+ * @param {number} [expectedGeneration]
+ */
+async function apiFetch(
+  path,
+  opts = {},
+  expectedGeneration = sessionGeneration,
+) {
+  const requestOptions = { headers: {}, method: "GET", ...opts };
+  const auth = await getValidToken(expectedGeneration);
+  const { token, networkError } = auth;
   if (!token) {
     return { error: networkError ? "network" : "unauthorized" };
   }
 
+  const fetchAuthorized = (accessToken) =>
+    fetchWithTimeout(`${OAuthConfig.BASE_URL}${path}`, {
+      ...requestOptions,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...requestOptions.headers,
+      },
+    });
+
   let res;
   try {
-    res = await fetchWithTimeout(`${OAuthConfig.BASE_URL}${path}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...opts.headers,
-      },
-      ...opts,
-    });
+    res = await fetchAuthorized(token);
   } catch {
     return { error: "network" };
   }
 
   if (res.status === 401) {
-    await clearTokens();
+    const method = String(requestOptions.method || "GET").toUpperCase();
+    const canRetry = method === "GET" || method === "HEAD";
+
+    if (canRetry && auth.generation === sessionGeneration) {
+      const data = await getTokens();
+      if (auth.generation !== sessionGeneration) {
+        return { error: "unauthorized" };
+      }
+
+      const refreshToken = data[StorageKeys.REFRESH_TOKEN];
+      if (refreshToken) {
+        const refreshed = await refreshTokenOnce(refreshToken, auth.generation);
+        if (!refreshed.token) {
+          return { error: refreshed.networkError ? "network" : "unauthorized" };
+        }
+
+        try {
+          res = await fetchAuthorized(refreshed.token);
+        } catch {
+          return { error: "network" };
+        }
+      }
+    }
+
+    if (res.status === 401) {
+      await clearTokens(auth.generation);
+      return { error: "unauthorized" };
+    }
+  }
+
+  if (auth.generation !== sessionGeneration) {
     return { error: "unauthorized" };
   }
 
@@ -235,9 +388,10 @@ async function apiFetch(path, opts = {}) {
 }
 
 async function fetchCollections() {
+  const generation = sessionGeneration;
   const [rootRes, childRes] = await Promise.all([
-    apiFetch("/rest/v1/collections"),
-    apiFetch("/rest/v1/collections/childrens"),
+    apiFetch("/rest/v1/collections", {}, generation),
+    apiFetch("/rest/v1/collections/childrens", {}, generation),
   ]);
 
   if (rootRes.error || childRes.error) {
@@ -282,10 +436,16 @@ async function fetchCollections() {
 }
 
 /** \u30da\u30fc\u30b8\u6307\u5b9a\u306e\u30d6\u30c3\u30af\u30de\u30fc\u30af\u53d6\u5f97\u3002 */
-async function fetchBookmarks(collectionId, page = 0) {
+async function fetchBookmarks(
+  collectionId,
+  page = 0,
+  expectedGeneration = sessionGeneration,
+) {
   const id = collectionId || 0;
   const res = await apiFetch(
     `/rest/v1/raindrops/${id}?perpage=${SharedConfig.PER_PAGE}&page=${page}&sort=-created`,
+    {},
+    expectedGeneration,
   );
 
   if (res.error) return res;
@@ -305,8 +465,11 @@ async function fetchBookmarks(collectionId, page = 0) {
  * 指定コレクションの全ページを取得する。
  * Raindrop.io への同時リクエスト数を抑えるため、並列度 6 で処理する。
  */
-async function fetchAllBookmarks(collectionId) {
-  const first = await fetchBookmarks(collectionId, 0);
+async function fetchAllBookmarks(
+  collectionId,
+  expectedGeneration = sessionGeneration,
+) {
+  const first = await fetchBookmarks(collectionId, 0, expectedGeneration);
   if (first.error) return first;
 
   let items = first.items || [];
@@ -324,7 +487,7 @@ async function fetchAllBookmarks(collectionId) {
     );
     const pages = [];
     for (let page = start; page < end; page++) {
-      pages.push(fetchBookmarks(collectionId, page));
+      pages.push(fetchBookmarks(collectionId, page, expectedGeneration));
     }
 
     const results = await Promise.all(pages);
@@ -351,29 +514,49 @@ function getSelectedCollectionId(selectedCollection) {
  * 同じコレクションへの並行取得を 1 本へまとめ、取得対象が現在も選択中ならキャッシュする。
  * 選択変更中に古い取得が完了しても、新しいコレクションのキャッシュを上書きしない。
  */
-function refreshBookmarksCache(collectionId) {
+function refreshBookmarksCache(
+  collectionId,
+  expectedGeneration = sessionGeneration,
+) {
+  if (expectedGeneration !== sessionGeneration) {
+    return Promise.resolve({ error: "unauthorized" });
+  }
+
   const id = collectionId || 0;
-  const inFlight = cacheRefreshPromises.get(id);
+  const cacheKey = `${expectedGeneration}:${id}`;
+  const inFlight = cacheRefreshPromises.get(cacheKey);
   if (inFlight) return inFlight;
 
   const refresh = (async () => {
-    const result = await fetchAllBookmarks(id);
+    const result = await fetchAllBookmarks(id, expectedGeneration);
     if (result.error) return result;
+    if (expectedGeneration !== sessionGeneration) {
+      return { error: "unauthorized" };
+    }
 
     const stored = await chrome.storage.local.get(StorageKeys.SELECTED_COLLECTION);
+    if (expectedGeneration !== sessionGeneration) {
+      return { error: "unauthorized" };
+    }
     const currentId = getSelectedCollectionId(
       stored[StorageKeys.SELECTED_COLLECTION],
     );
 
     if (currentId === id) {
       try {
-        await chrome.storage.local.set({
-          [StorageKeys.BOOKMARKS_CACHE]: {
-            collectionId: id,
-            savedAt: Date.now(),
-            items: result.items,
-          },
+        await queueStorageMutation(async () => {
+          if (expectedGeneration !== sessionGeneration) return;
+          await chrome.storage.local.set({
+            [StorageKeys.BOOKMARKS_CACHE]: {
+              collectionId: id,
+              savedAt: Date.now(),
+              items: result.items,
+            },
+          });
         });
+        if (expectedGeneration !== sessionGeneration) {
+          return { error: "unauthorized" };
+        }
       } catch {
         // 容量上限などでキャッシュできなくても、取得済み一覧は popup へ返す。
       }
@@ -381,17 +564,20 @@ function refreshBookmarksCache(collectionId) {
 
     return result;
   })().finally(() => {
-    cacheRefreshPromises.delete(id);
+    cacheRefreshPromises.delete(cacheKey);
   });
 
-  cacheRefreshPromises.set(id, refresh);
+  cacheRefreshPromises.set(cacheKey, refresh);
   return refresh;
 }
 
 async function refreshSelectedBookmarksCache() {
+  const generation = sessionGeneration;
   const stored = await chrome.storage.local.get(StorageKeys.SELECTED_COLLECTION);
+  if (generation !== sessionGeneration) return { error: "unauthorized" };
   return refreshBookmarksCache(
     getSelectedCollectionId(stored[StorageKeys.SELECTED_COLLECTION]),
+    generation,
   );
 }
 

@@ -35,6 +35,12 @@ function normalize(item) {
   };
 }
 
+function isBookmarksCacheFresh(cache, now = Date.now()) {
+  const age = now - cache?.savedAt;
+  const ttlMs = SharedConfig.BOOKMARKS_REFRESH_INTERVAL_MINUTES * 60 * 1000;
+  return Number.isFinite(age) && age >= 0 && age < ttlMs;
+}
+
 // ========== DOM \u53c2\u7167 ==========
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -214,7 +220,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     if (currentGen !== loadGeneration) {
-      resetLoading();
       return;
     }
 
@@ -222,7 +227,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // \u30ed\u30b0\u30a2\u30a6\u30c8\u3084 401 \u3067 generation \u304c\u9032\u3093\u3067\u3044\u305f\u3089\u3001state \u3082\u30ad\u30e3\u30c3\u30b7\u30e5\u3082\u66f8\u304d\u623b\u3055\u306a\u3044
     if (currentGen !== loadGeneration) {
-      resetLoading();
       return;
     }
 
@@ -492,7 +496,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     showScreen(Screens.MAIN);
 
     // \u9078\u629e\u4e2d\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u306e\u30ad\u30e3\u30c3\u30b7\u30e5\u304c\u3042\u308c\u3070\u5373\u5ea7\u306b\u8868\u793a\u3059\u308b\u3002
-    // background \u304c\u5b9a\u671f\u66f4\u65b0\u3059\u308b\u305f\u3081\u3001popup \u306f\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u5f85\u3061\u3092\u3057\u306a\u3044\u3002
+    // TTL \u8d85\u904e\u6642\u3082\u8868\u793a\u3092\u7dad\u6301\u3057\u3064\u3064\u3001\u88cf\u3067\u6700\u65b0\u30c7\u30fc\u30bf\u3092\u53d6\u5f97\u3059\u308b\u3002
     const cache = stored[StorageKeys.BOOKMARKS_CACHE];
     const selectedCollectionId = state.selectedCollection?._id || 0;
     const cacheMatchesSelection =
@@ -505,6 +509,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       state.filteredBookmarks = state.bookmarks;
       // \u30ad\u30e3\u30c3\u30b7\u30e5\u521d\u56de\u8868\u793a\u306f\u300c\u521d\u3081\u3066\u898b\u305b\u308b\u300d\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3
       renderBookmarks(state.filteredBookmarks, true);
+      if (!isBookmarksCacheFresh(cache)) {
+        loadBookmarks(false);
+      }
     } else {
       loadBookmarks(true);
     }

@@ -27,14 +27,19 @@ function createEvent() {
 function createHarness({
   selectedCollection = { _id: 42, title: "対象" },
   failCacheWrite = false,
-  pages,
+  tokenExpiry = Date.now() + 60 * 60 * 1000,
+  bookmarksCache,
+  fetchHandler,
+  pages = async () => ({ count: 0, items: [] }),
 }) {
   const storage = {
     accessToken: "access-token",
     refreshToken: "refresh-token",
-    tokenExpiry: Date.now() + 60 * 60 * 1000,
+    tokenExpiry,
     selectedCollection,
+    themeMode: "dark",
   };
+  if (bookmarksCache !== undefined) storage.bookmarksCache = bookmarksCache;
   const alarms = new Map();
   const fetchCalls = [];
 
@@ -104,10 +109,11 @@ function createHarness({
     chrome,
     console,
     crypto: webcrypto,
-    fetch: async (url) => {
+    fetch: async (url, options) => {
+      if (fetchHandler) return fetchHandler(url, options);
       const page = Number(new URL(url).searchParams.get("page"));
       fetchCalls.push(page);
-      const payload = await pages(page);
+      const payload = await pages(page, options, url);
       return {
         ok: true,
         status: 200,
@@ -256,4 +262,243 @@ test("容量上限でキャッシュできなくても取得結果は popup へ�
 
   assert.equal(result.items[0].title, "表示可能");
   assert.equal(harness.storage.bookmarksCache, undefined);
+});
+
+test("期限前の先行 refresh が通信失敗した場合は既存トークンを使う", async () => {
+  const harness = createHarness({
+    tokenExpiry: Date.now() + 60 * 1000,
+    fetchHandler: async () => {
+      throw new Error("offline");
+    },
+  });
+
+  const result = await harness.run("getValidToken()");
+
+  assert.equal(result.token, "access-token");
+  assert.equal(harness.storage.accessToken, "access-token");
+});
+
+test("期限切れ後の refresh 通信失敗では既存トークンを使わない", async () => {
+  const harness = createHarness({
+    tokenExpiry: Date.now() - 1,
+    fetchHandler: async () => {
+      throw new Error("offline");
+    },
+  });
+
+  const result = await harness.run("getValidToken()");
+
+  assert.equal(result.token, null);
+  assert.equal(result.networkError, true);
+});
+
+test("API の 401 は refresh 成功後に GET を一度だけ再試行する", async () => {
+  let apiRequestCount = 0;
+  const authorizations = [];
+  const harness = createHarness({
+    bookmarksCache: { collectionId: 42, savedAt: Date.now(), items: [] },
+    fetchHandler: async (url, options) => {
+      if (url === "https://raindrop.io/oauth/access_token") {
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return {
+              access_token: "refreshed-access-token",
+              refresh_token: "refreshed-refresh-token",
+              expires_in: 1200,
+            };
+          },
+        };
+      }
+
+      apiRequestCount += 1;
+      authorizations.push(options?.headers?.Authorization);
+      if (apiRequestCount === 1) return { ok: false, status: 401 };
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { items: [] };
+        },
+      };
+    },
+  });
+
+  const result = await harness.run('apiFetch("/rest/v1/raindrops/42")');
+
+  assert.deepEqual(Array.from(result.items), []);
+  assert.equal(apiRequestCount, 2);
+  assert.deepEqual(authorizations, [
+    "Bearer access-token",
+    "Bearer refreshed-access-token",
+  ]);
+  assert.equal(harness.storage.accessToken, "refreshed-access-token");
+  assert.equal(harness.storage.refreshToken, "refreshed-refresh-token");
+  assert.equal(harness.storage.selectedCollection._id, 42);
+  assert.equal(harness.storage.bookmarksCache.collectionId, 42);
+});
+
+test("API の 401 後に refresh も拒否された場合は利用者データを破棄する", async () => {
+  let requestCount = 0;
+  const harness = createHarness({
+    bookmarksCache: { collectionId: 42, savedAt: Date.now(), items: [] },
+    fetchHandler: async () => {
+      requestCount += 1;
+      return {
+        ok: false,
+        status: requestCount === 1 ? 401 : 400,
+      };
+    },
+  });
+
+  const result = await harness.run('apiFetch("/rest/v1/raindrops/42")');
+
+  assert.equal(result.error, "unauthorized");
+  assert.equal(requestCount, 2);
+  assert.equal(harness.storage.accessToken, undefined);
+  assert.equal(harness.storage.refreshToken, undefined);
+  assert.equal(harness.storage.tokenExpiry, undefined);
+  assert.equal(harness.storage.selectedCollection, undefined);
+  assert.equal(harness.storage.bookmarksCache, undefined);
+  assert.equal(harness.storage.themeMode, "dark");
+});
+
+test("ログアウト前の refresh は新しいセッションを上書きしない", async () => {
+  let releaseRefresh;
+  let markRefreshStarted;
+  const refreshStarted = new Promise((resolve) => {
+    markRefreshStarted = resolve;
+  });
+  const waitForRelease = new Promise((resolve) => {
+    releaseRefresh = resolve;
+  });
+  const harness = createHarness({
+    tokenExpiry: Date.now() + 60 * 1000,
+    fetchHandler: async () => {
+      markRefreshStarted();
+      await waitForRelease;
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return {
+            access_token: "late-access-token",
+            refresh_token: "late-refresh-token",
+            expires_in: 1200,
+          };
+        },
+      };
+    },
+  });
+
+  const pending = harness.run("getValidToken()");
+  await refreshStarted;
+  await harness.run("clearTokens()");
+  assert.equal(harness.storage.accessToken, undefined);
+  await harness.run(`establishSession({
+    access_token: "new-access-token",
+    refresh_token: "new-refresh-token",
+    expires_in: 1200
+  })`);
+  releaseRefresh();
+  const result = await pending;
+
+  assert.equal(result.token, null);
+  assert.equal(harness.storage.accessToken, "new-access-token");
+  assert.equal(harness.storage.refreshToken, "new-refresh-token");
+  assert.equal(typeof harness.storage.tokenExpiry, "number");
+});
+
+test("ログアウト前のブックマーク取得を新しいセッションと共有しない", async () => {
+  let releaseOldFetch;
+  let markOldFetchStarted;
+  const oldFetchStarted = new Promise((resolve) => {
+    markOldFetchStarted = resolve;
+  });
+  const waitForOldRelease = new Promise((resolve) => {
+    releaseOldFetch = resolve;
+  });
+  const harness = createHarness({
+    selectedCollection: null,
+    pages: async (_page, options) => {
+      const authorization = options?.headers?.Authorization;
+      if (authorization === "Bearer access-token") {
+        markOldFetchStarted();
+        await waitForOldRelease;
+        return {
+          count: 1,
+          items: [
+            {
+              _id: 1,
+              title: "旧アカウント",
+              link: "https://old.example",
+              domain: "old.example",
+            },
+          ],
+        };
+      }
+
+      return {
+        count: 1,
+        items: [
+          {
+            _id: 2,
+            title: "新アカウント",
+            link: "https://new.example",
+            domain: "new.example",
+          },
+        ],
+      };
+    },
+  });
+
+  const oldRefresh = harness.run("refreshBookmarksCache(0)");
+  await oldFetchStarted;
+  await harness.run("clearTokens()");
+  await harness.run(`establishSession({
+    access_token: "new-access-token",
+    refresh_token: "new-refresh-token",
+    expires_in: 1200
+  })`);
+
+  const latest = await harness.run("refreshBookmarksCache(0)");
+  releaseOldFetch();
+  const stale = await oldRefresh;
+
+  assert.equal(latest.items[0].title, "新アカウント");
+  assert.equal(stale.error, "unauthorized");
+  assert.equal(harness.storage.bookmarksCache.items[0].title, "新アカウント");
+});
+
+test("ログアウト前に開始した API 応答をセッション変更後に返さない", async () => {
+  let releaseFetch;
+  let markFetchStarted;
+  const fetchStarted = new Promise((resolve) => {
+    markFetchStarted = resolve;
+  });
+  const waitForRelease = new Promise((resolve) => {
+    releaseFetch = resolve;
+  });
+  const harness = createHarness({
+    fetchHandler: async () => {
+      markFetchStarted();
+      await waitForRelease;
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { items: [{ _id: 1, title: "旧アカウント" }] };
+        },
+      };
+    },
+  });
+
+  const pending = harness.run('apiFetch("/rest/v1/collections")');
+  await fetchStarted;
+  await harness.run("clearTokens()");
+  releaseFetch();
+  const result = await pending;
+
+  assert.equal(result.error, "unauthorized");
 });

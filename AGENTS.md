@@ -117,7 +117,7 @@ chrome.storage.local:
 - **検索はローカルフィルタ** — `_titleLower` / `_domainLower` を事前計算し毎回の `toLowerCase()` を回避。
 - **並列ページ取得** — background の `fetchAllBookmarks` が `count` から総ページ数を算出し `Promise.all` + concurrency=6 で並列取得。
 - **事前取得と定期更新** — browser 起動・コレクション変更・5分間隔の alarm で選択中コレクションを更新。同じコレクションへの並行取得は Promise coalescing で単一化。
-- **loadGeneration カウンタ** — コレクション切り替え時に古い非同期ロードをキャンセル。生成番号が変わったら即 `resetLoading()` して return。
+- **loadGeneration カウンタ** — コレクション切り替え時に古い非同期ロードをキャンセル。生成番号が変わった古いロードは UI 状態を変更せず return し、最新 generation だけが `resetLoading()` する。
 - **handler() の catch** — `chrome.runtime.onMessage` の非同期 handler は `.catch(e => sendResponse({ error: e.message }))` で reject 時も必ず応答。
 - **favicon は Google Favicon Service** — `FAVICON_SIZE` 定数で URL と DOM 属性を一元化。プライバシーポリシーに開示済。
 - **zip.ps1 / zip.sh の除外ルール** — `scripts/` (開発専用)、`node_modules`、`webstore`、`package*.json`、`icons/icon.svg` (原本) を除外。
