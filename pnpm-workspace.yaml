@@ -11,3 +11,4 @@ minimumReleaseAgeExclude:
   - puppeteer@25.7.0
   - puppeteer-core@25.7.0
   - kagayoi-support-extension@1.0.4
+  - kagayoi-support-extension@1.0.5

@@ -63,6 +63,7 @@
       this.attachShadow({ mode: "open" })
       this.instanceId = `kagayoi-support-${++instanceCount}`
       this.codeRequestedFor = ""
+      this.ticketIdempotencyKey = ""
       this.busy = false
     }
 
@@ -223,9 +224,11 @@
 
     async createTicket(accessToken, manageBusy = true) {
       const action = async () => {
+        this.ticketIdempotencyKey ||= crypto.randomUUID()
         const result = await this.api("/api/tickets", {
           method: "POST",
           token: accessToken,
+          idempotencyKey: this.ticketIdempotencyKey,
           body: {
             productId: this.productId,
             customerName: this.form.elements.customerName.value.trim() || null,
@@ -239,6 +242,7 @@
             diagnostics: this.diagnostics,
           },
         })
+        this.ticketIdempotencyKey = ""
         this.showSuccess(result.ticket.reference)
       }
       if (manageBusy) await this.runBusy(action)
@@ -271,6 +275,7 @@
     async api(path, options) {
       const headers = { "Content-Type": "application/json" }
       if (options.token) headers.Authorization = `Bearer ${options.token}`
+      if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey
       let response
       try {
         response = await fetch(`${this.apiBase}${path}`, {
