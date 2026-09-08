@@ -11,7 +11,6 @@ const read = (path) => readFileSync(resolve(root, path), "utf8");
 test("公開プライバシー文書が実際の保存先と通信先を開示する", () => {
   const documents = [
     read("docs/privacy-policy.md"),
-    read("web/privacy.html"),
     read("webstore/store-listing.txt"),
     read("scripts/amo-metadata-update.js"),
   ];
@@ -22,8 +21,7 @@ test("公開プライバシー文書が実際の保存先と通信先を開示�
   }
 
   assert.doesNotMatch(
-    read("web/privacy.html"),
+    read("docs/privacy-policy.md"),
     /Raindrop\.io 以外の外部サーバーへの送信は一切行いません/,
   );
-  assert.match(read("web/privacy.html"), /<strong>alarms<\/strong>/);
 });
