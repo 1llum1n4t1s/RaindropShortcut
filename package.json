@@ -4,7 +4,7 @@
   "type": "commonjs",
   "description": "Chrome extension to quickly access Raindrop.io bookmarks",
   "scripts": {
-    "sync:support": "node --preserve-symlinks-main ./node_modules/kagayoi-support-extension/bin/kagayoi-support-sync.mjs",
+    "sync:support": "node --preserve-symlinks-main ./node_modules/@kagayoi/support-extension/bin/kagayoi-support-sync.mjs",
     "prebuild": "pnpm sync:support",
     "test": "node --test",
     "generate-icons": "node scripts/generate-icons.js",
@@ -13,7 +13,7 @@
   },
   "devDependencies": {
     "chrome-webstore-upload-cli": "^4.0.1",
-    "kagayoi-support-extension": "1.0.5",
+    "@kagayoi/support-extension": "1.0.6",
     "puppeteer": "^25.10.0",
     "sharp": "^0.35.4",
     "web-ext": "10.6.0",
