@@ -14,10 +14,10 @@
   "devDependencies": {
     "chrome-webstore-upload-cli": "^4.0.1",
     "@kagayoi/support-extension": "1.0.6",
-    "puppeteer": "^25.10.0",
+    "puppeteer": "^25.11.0",
     "sharp": "^0.35.4",
     "web-ext": "10.6.0",
-    "wrangler": "4.129.0"
+    "wrangler": "4.134.0"
   },
   "keywords": [
     "chrome-extension",
