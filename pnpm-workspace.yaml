@@ -11,3 +11,5 @@ minimumReleaseAgeExclude:
   - '@kagayoi/support-extension@1.0.6'
   - puppeteer@25.7.0
   - puppeteer-core@25.7.0
+  - miniflare@5.20260926.1-alpha
+  - wrangler@4.144.0
