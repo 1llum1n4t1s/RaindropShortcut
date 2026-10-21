@@ -17,7 +17,7 @@
     "puppeteer": "^25.14.0",
     "sharp": "^0.35.5",
     "web-ext": "10.8.0",
-    "wrangler": "4.151.0"
+    "wrangler": "4.151.1"
   },
   "keywords": [
     "chrome-extension",
