@@ -17,8 +17,8 @@ Raindrop.io のブックマークをツールバーからすばやく検索・�
 
 ## インストール
 
-- **Chrome Web Store**: 公開済（リンクは Web Store 公開ページを参照）
-- **Firefox Add-ons (AMO)**: [raindrop-shortcuts](https://addons.mozilla.org/firefox/addon/raindrop-shortcuts/) （レビュー後に公開）
+- **Chrome Web Store**: [Raindrop Shortcuts](https://chromewebstore.google.com/detail/jdehenbjjipaibjccdblhdhffmlggdnp)
+- **Firefox Add-ons (AMO)**: [Raindrop Shortcuts](https://addons.mozilla.org/firefox/addon/raindrop-shortcuts/)（Firefox 128 以降）
 
 ## 使い方
 
@@ -26,6 +26,14 @@ Raindrop.io のブックマークをツールバーからすばやく検索・�
 2. 「ログイン」ボタンを押して Raindrop.io アカウントで認証（初回のみ）
 3. ブックマーク一覧が表示されます
 4. 設定（⚙ アイコン）から表示するコレクションを選択
+
+検索欄では表示中のブックマークをタイトル・ドメイン名で絞り込めます。設定ではリンクの開き方（新しいタブ / 現在のタブ）とテーマ（自動 / ライト / ダーク）も変更できます。
+
+## 困ったとき
+
+- **追加したブックマークが見えない**: 一覧は5分間隔でバックグラウンド更新されます。最後の取得から5分以上経っている場合は、ポップアップを開き直すと、保存済み一覧を表示しながら最新データを取得します。
+- **ネットワークエラーが出る**: 接続を確認してポップアップを開き直してください。認証が失効してログイン画面に戻った場合は、再度ログインしてください。
+- **お問い合わせ**: 設定画面のサポートフッターから送信できます。初回はメールで届く確認コードによる本人確認が必要です。
 
 ## プライバシー
 
@@ -38,3 +46,5 @@ Raindrop.io のブックマークをツールバーからすばやく検索・�
 ## ライセンス
 
 MIT
+
+開発・ローカル読み込みの手順は [AGENTS.md](AGENTS.md)、実装の構成と設計判断は [DESIGN.md](DESIGN.md) を参照してください。

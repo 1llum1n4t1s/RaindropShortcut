@@ -15,7 +15,7 @@ pnpm run generate-icons        # icons/icon.svg → icons/icon-{16,48,128}.png (
 pnpm run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (puppeteer)
 ```
 
-パッケージ作成:
+パッケージ作成 (配布ファイルの配置は `scripts/stage-extension.js <output-directory> <chrome|firefox>` に共通化):
 ```bash
 powershell -ExecutionPolicy Bypass -File zip.ps1   # raindrop-shortcut.zip を生成
 bash zip.sh                                        # 同等 (bash 版)
@@ -35,6 +35,8 @@ webstore/               # Chrome Web Store / Firefox AMO 掲載画像テンプ�
 docs/                   # privacy-policy.md など
 scripts/                # 開発用スクリプト
   ├── generate-icons.js          # icons/icon.svg → PNG (sharp)
+  ├── stage-extension.js         # Chrome / Firefox 共通の配布ファイル配置
+  ├── amo-common.js              # AMO JWT 生成・429 再試行の共通処理
   ├── amo-metadata-update.js     # AMO API v5 で name/summary/description/privacy_policy を一括 PATCH
   └── amo-previews-upload.js     # AMO previews multipart upload (rate limit 重く実用は Dev Hub 手動)
 .github/workflows/      # publish.yml (Chrome Web Store + Firefox AMO の自動公開)
@@ -127,9 +129,9 @@ chrome.storage.local:
 `manifest.json` の正本は Chrome 向け (`service_worker` のみ) とし、 Firefox 固有の差分は firefox-build/ 構築時に注入する。 Chrome は Firefox 固有フィールドを silently ignore する。
 
 - **`browser_specific_settings.gecko`** — Firefox 用 extension id (`{37d6aac9-e947-4a4b-982d-f9945e41b234}`) と `strict_min_version: "128.0"`、 `data_collection_permissions.required: ["none"]` を保持 (正本に併記したまま。 Chrome は無視する)。
-- **`background.scripts` は firefox-build 構築時に注入** — 正本に `service_worker` と併記すると Chrome の拡張機能画面に `'background.scripts' requires manifest version of 2 or lower.` 警告が出るため、 正本には置かない。 firefox-build/ 構築の `node -e` で `m.background.scripts=['src/lib/actions.js','src/background/background.js']` を追加する (publish.yml と手動フローの両方)。 Firefox は `scripts` 配列を event page として読み、 AMO validator は `service_worker` 単独を reject する (`"Unsupported /background/service_worker manifest property used without /background/scripts property as Firefox-compatible fallback"`)。 `scripts` 配列の先頭に `src/lib/actions.js` を置くことで `TokenStorageKeys` 等のグローバルが evaluation 順で先に定義される。
+- **`background.scripts` は firefox-build 構築時に注入** — 正本に `service_worker` と併記すると Chrome の拡張機能画面に `'background.scripts' requires manifest version of 2 or lower.` 警告が出るため、 正本には置かない。 `scripts/stage-extension.js <output-directory> firefox` が `m.background.scripts=['src/lib/actions.js','src/background/background.js']` を追加する (publish.yml と手動フローの両方)。 Firefox は `scripts` 配列を event page として読み、 AMO validator は `service_worker` 単独を reject する (`"Unsupported /background/service_worker manifest property used without /background/scripts property as Firefox-compatible fallback"`)。 `scripts` 配列の先頭に `src/lib/actions.js` を置くことで `TokenStorageKeys` 等のグローバルが evaluation 順で先に定義される。
 - **`importScripts` の typeof guard** — `worker` 限定 API なので Firefox event page では `ReferenceError` になる。 `background.js` 先頭で `typeof importScripts === "function"` で囲み、worker のときだけ呼ぶ。
-- **`manifest.json` の `key` フィールド** — Chrome ローカル開発用の公開鍵。 Firefox AMO は無視するが、 配布物には不要なので `zip.ps1` / `zip.sh` と firefox-build/ 構築時に削除する。
+- **`manifest.json` の `key` フィールド** — Chrome ローカル開発用の公開鍵。 Firefox AMO は無視するが、 配布物には不要なので 各配布経路から呼ぶ `scripts/stage-extension.js` で除去する。
 
 ## Firefox AMO 公開フロー (手動フォールバック)
 
@@ -137,14 +139,9 @@ chrome.storage.local:
 
 ```powershell
 # 1. firefox-build/ を構築 (key を除き background.scripts を注入した manifest + icons PNG + src/)
-$dir = "firefox-build"
-Remove-Item $dir -Recurse -Force -EA SilentlyContinue
-New-Item -ItemType Directory $dir | Out-Null
-node -e "const m=require('./manifest.json');delete m.key;m.background.scripts=['src/lib/actions.js','src/background/background.js'];require('fs').writeFileSync('firefox-build/manifest.json',JSON.stringify(m,null,2))"
-New-Item -ItemType Directory "$dir/icons" | Out-Null
-Copy-Item "icons/icon-16.png","icons/icon-48.png","icons/icon-128.png" -Destination "$dir/icons/"
-Copy-Item "src" -Destination $dir -Recurse
-Get-ChildItem $dir -Recurse -Include "*.DS_Store","*.swp","*~","preview.html","*.ttf" | Remove-Item -Force
+# 出力先は未作成または空のディレクトリを指定する。既存データは削除しない。
+node scripts/stage-extension.js firefox-build firefox
+if ($LASTEXITCODE -ne 0) { throw "Firefox staging failed." }
 
 # 2. web-ext sign で AMO submission API 経由 upload
 $env:WEB_EXT_API_KEY = "user:..."
