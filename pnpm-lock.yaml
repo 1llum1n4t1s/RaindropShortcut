@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  node-forge@1.4.0: ff00865273911dba8d30f47119922377bfec95ee31b489bbacfb19b673bd0683
+
 importers:
 
   .:
@@ -1869,7 +1872,7 @@ snapshots:
       bluebird: 3.7.2
       commander: 9.5.0
       debug: 4.3.7
-      node-forge: 1.4.0
+      node-forge: 1.4.0(patch_hash=ff00865273911dba8d30f47119922377bfec95ee31b489bbacfb19b673bd0683)
       split: 1.0.1
     transitivePeerDependencies:
       - supports-color
@@ -2955,7 +2958,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  node-forge@1.4.0: {}
+  node-forge@1.4.0(patch_hash=ff00865273911dba8d30f47119922377bfec95ee31b489bbacfb19b673bd0683): {}
 
   nth-check@2.1.1:
     dependencies:

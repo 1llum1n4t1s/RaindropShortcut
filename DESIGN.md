@@ -48,3 +48,13 @@ favicon はドメイン名を Google Favicon Service へ送り、フォントは
 manifest の公開鍵 `key` はローカル Chrome の拡張 ID と OAuth redirect URI を一定にするため保持し、配布時に除去する。配布スクリプトは未作成または空でリンクではない出力ディレクトリへ manifest・PNG アイコン・`src/` のみを配置する。開発依存やストア画像を含めない方式を Chrome/Firefox と手動/CI で共有する。
 
 既存の `tests/` は Node.js の組み込みテストでキャッシュ、セッション競合、トークン再試行、popup の世代管理、問い合わせ・プライバシー契約を確認する。ブラウザ上の OAuth と画面操作の最終確認は別途必要になる。
+
+## 開発依存の暫定セキュリティ対策
+
+`web-ext → @devicefarmer/adbkit → node-forge@1.4.0` の開発依存に、RSA 署名検証で入れ子の ASN.1 要素を余分に受理する [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) がある。2026-10-22 時点で修正版は npm 未公開のため、[上流 PR #1152 の提案](https://github.com/digitalbazaar/forge/pull/1152/commits/ceba34402e329f0365134f23fe19898756527d65)を基礎に `patches/node-forge@1.4.0.patch` を適用している。さらに、同提案では受理される内容付きの不正な NULL パラメーターも、[ITU-T X.690 §8.8.2](https://www.itu.int/rec/T-REC-X.690-202102-I/en) に従う空値チェックで拒否する。
+
+`pnpm-workspace.yaml` の `patchedDependencies` と lock のハッシュで、通常のインストール・CI の frozen install に同じ修正を適用する。`pnpm test` の先頭で `scripts/verify-node-forge.js` が web-ext から実際に解決される依存を読み、生成した一時鍵と合成データだけで正常署名・RSA-PSS・不正な DigestInfo の拒否を確認する。秘密鍵の保存や外部サービスへの送信は行わない。
+
+node-forge は拡張機能の配布物には含まれない。脆弱な検証呼出しは adbkit の TCPUSB ブリッジにあり、既存の build / lint / sign はその経路を利用しない。パッチは開発依存に残る脆弱処理の防御で、アプリの権限・保存データ・配信方式を変えない。
+
+版番号は 1.4.0 のままなので、`pnpm audit` と Dependabot の版に基づく High 警告は引き続き表示される。修正版が正式公開されたら、その版へ更新し、パッチ登録とファイルを外して lock を再生成し、セキュリティ検証・既存テスト・ビルド・web-ext の検査を再実行する。

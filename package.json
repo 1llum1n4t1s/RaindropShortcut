@@ -6,7 +6,7 @@
   "scripts": {
     "sync:support": "node --preserve-symlinks-main ./node_modules/@kagayoi/support-extension/bin/kagayoi-support-sync.mjs",
     "prebuild": "pnpm sync:support",
-    "test": "node --test",
+    "test": "node scripts/verify-node-forge.js && node --test",
     "generate-icons": "node scripts/generate-icons.js",
     "generate-screenshots": "node webstore/generate-screenshots.js",
     "build": "pnpm run generate-icons && pnpm run generate-screenshots"

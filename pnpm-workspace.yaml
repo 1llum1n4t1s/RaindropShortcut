@@ -13,3 +13,6 @@ minimumReleaseAgeExclude:
   - puppeteer-core@25.7.0
   - miniflare@5.20260926.1-alpha
   - wrangler@4.144.0
+
+patchedDependencies:
+  node-forge@1.4.0: patches/node-forge@1.4.0.patch
