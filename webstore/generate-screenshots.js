@@ -68,9 +68,11 @@ async function generateScreenshot(browser, htmlPath, outputPath, width, height) 
     });
 
     console.log(`✅ 生成完了: ${outputPath} (${width}x${height})`);
+    return true;
   } catch (error) {
     console.error(`❌ エラー: ${htmlPath} -> ${outputPath}`);
     console.error(error);
+    return false;
   } finally {
     await page.close();
   }
@@ -87,13 +89,20 @@ async function main() {
     protocolTimeout: 300000
   });
 
+  let failures = 0;
   try {
     for (const config of HTML_CONFIGS) {
       const outputPath = path.join(OUTPUT_DIR, config.output);
-      await generateScreenshot(browser, config.input, outputPath, config.width, config.height);
+      if (!await generateScreenshot(browser, config.input, outputPath, config.width, config.height)) {
+        failures++;
+      }
     }
   } finally {
     await browser.close();
+  }
+
+  if (failures > 0) {
+    throw new Error(`${failures} 件の画像を生成できませんでした`);
   }
 
   console.log('\n✨ すべての画像生成が完了しました！');

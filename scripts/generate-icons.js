@@ -19,7 +19,7 @@ async function generateIcons() {
   fs.mkdirSync(iconsDir, { recursive: true });
 
   // 各サイズのPNGを並列生成
-  await Promise.all(sizes.map(async (size) => {
+  const results = await Promise.allSettled(sizes.map(async (size) => {
     const outputPath = path.join(iconsDir, `icon-${size}.png`);
     try {
       await sharp(svgPath)
@@ -30,8 +30,13 @@ async function generateIcons() {
       console.log(`✅ ${size}x${size} アイコンを生成しました: ${path.basename(outputPath)}`);
     } catch (error) {
       console.error(`❌ ${size}x${size} アイコンの生成に失敗しました:`, error.message);
+      throw error;
     }
   }));
+
+  if (results.some((result) => result.status === 'rejected')) {
+    throw new Error('アイコンをすべて生成できませんでした');
+  }
 
   console.log('\n🎉 アイコン生成が完了しました！');
   console.log('\n📂 生成されたファイル:');

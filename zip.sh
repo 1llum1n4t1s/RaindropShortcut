@@ -9,8 +9,8 @@ rm -f ./raindrop-shortcut.zip
 
 if [ -f scripts/generate-icons.js ]; then
   echo "アイコン生成中..."
-  pnpm install --silent 2>/dev/null
-  node scripts/generate-icons.js
+  pnpm install --silent 2>/dev/null || exit $?
+  node scripts/generate-icons.js || exit $?
 fi
 
 if ! command -v zip &> /dev/null; then
@@ -18,17 +18,13 @@ if ! command -v zip &> /dev/null; then
   exit 1
 fi
 
-# manifest.json から key フィールドを除去したビルドディレクトリを作成
-# (key はローカル開発専用、ストアアップロード時は不要)
+# 共通処理で配布ファイルを配置
 BUILD_DIR=$(mktemp -d)
-trap "rm -rf $BUILD_DIR" EXIT
+trap 'rm -rf "$BUILD_DIR"' EXIT
 
-node -e "const m=require('./manifest.json');delete m.key;require('fs').writeFileSync('$BUILD_DIR/manifest.json',JSON.stringify(m,null,2))"
-mkdir -p "$BUILD_DIR/icons"
-cp icons/icon-16.png icons/icon-48.png icons/icon-128.png "$BUILD_DIR/icons/"
-cp -r src "$BUILD_DIR/"
+node scripts/stage-extension.js "$BUILD_DIR" chrome || exit $?
 
-(cd "$BUILD_DIR" && zip -r "$OLDPWD/raindrop-shortcut.zip" . -x "*.DS_Store" "*.swp" "*~")
+(cd "$BUILD_DIR" && zip -r "$OLDPWD/raindrop-shortcut.zip" .)
 
 if [ $? -eq 0 ]; then
   echo "ZIPファイルを作成しました: raindrop-shortcut.zip"

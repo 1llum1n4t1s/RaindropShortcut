@@ -13,7 +13,7 @@
 // 認証: HS256 JWT (amo-metadata-update.js と同じ)
 // Node 20+ の global fetch / FormData / Blob を使う
 
-const crypto = require("crypto");
+const { makeJWT, withRateLimitRetry } = require("./amo-common");
 const fs = require("fs");
 const path = require("path");
 
@@ -36,30 +36,9 @@ const PREVIEWS = [
   { file: "webstore/images/03-hero-promo-1280x800.png", position: 3 },
 ];
 
-function b64url(buf) {
-  return Buffer.from(buf).toString("base64")
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function makeJWT() {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: ISS,
-    jti: crypto.randomBytes(16).toString("hex"),
-    iat: now,
-    exp: now + 60,
-  };
-  const data = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
-  const sig = b64url(crypto.createHmac("sha256", SECRET).update(data).digest());
-  return `${data}.${sig}`;
-}
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function rawApi(method, pathStr, opts = {}) {
   const headers = {
-    Authorization: `JWT ${makeJWT()}`,
+    Authorization: `JWT ${makeJWT(ISS, SECRET)}`,
     Accept: "application/json",
     ...(opts.headers || {}),
   };
@@ -79,17 +58,8 @@ async function rawApi(method, pathStr, opts = {}) {
 }
 
 // HTTP 429 自動リトライ。 multipart の body は再利用可能 (Blob 由来) なのでそのまま retry できる。
-async function api(method, pathStr, opts = {}) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const r = await rawApi(method, pathStr, opts);
-    if (r.status !== 429) return r;
-    const detail = typeof r.body === "object" ? r.body?.detail : "";
-    const m = /(\d+)\s*seconds?/i.exec(detail || "");
-    const wait = (m ? parseInt(m[1], 10) : 30) + 5;
-    console.log(`   ⏳ 429: ${wait}s 待機して retry (attempt=${attempt + 1})`);
-    await sleep(wait * 1000);
-  }
-  throw new Error("429 が 5 回連続で続いたので断念");
+function api(method, pathStr, opts = {}) {
+  return withRateLimitRetry(() => rawApi(method, pathStr, opts));
 }
 
 async function listPreviews(guidEnc) {

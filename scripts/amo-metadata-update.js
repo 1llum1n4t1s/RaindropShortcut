@@ -15,7 +15,7 @@
 // JWT payload: { iss, jti, iat, exp } (exp は 60 秒程度の短命トークン)
 // locale コードは BCP 47 厳密 (en は 400 拒否、en-US を使う)
 
-const crypto = require("crypto");
+const { makeJWT, withRateLimitRetry } = require("./amo-common");
 const { readFileSync } = require("fs");
 const https = require("https");
 const { resolve } = require("path");
@@ -140,28 +140,9 @@ const PRIVACY_POLICY = {
   ].join("\n"),
 };
 
-function b64url(buf) {
-  return Buffer.from(buf).toString("base64")
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function makeJWT() {
-  const header = { alg: "HS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: ISS,
-    jti: crypto.randomBytes(16).toString("hex"),
-    iat: now,
-    exp: now + 60,
-  };
-  const data = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}`;
-  const sig = b64url(crypto.createHmac("sha256", SECRET).update(data).digest());
-  return `${data}.${sig}`;
-}
-
 function rawRequest(method, pathStr, body) {
   return new Promise((resolve, reject) => {
-    const token = makeJWT();
+    const token = makeJWT(ISS, SECRET);
     const data = body ? JSON.stringify(body) : null;
     const opts = {
       hostname: HOST,
@@ -196,20 +177,9 @@ function rawRequest(method, pathStr, body) {
   });
 }
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 // HTTP 429 (rate limited) を自動リトライ。レスポンスの "Expected available in N seconds" を尊重。
-async function apiRequest(method, pathStr, body) {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const r = await rawRequest(method, pathStr, body);
-    if (r.status !== 429) return r;
-    const detail = typeof r.body === "object" ? r.body?.detail : "";
-    const m = /(\d+)\s*seconds?/i.exec(detail || "");
-    const wait = (m ? parseInt(m[1], 10) : 30) + 5; // バッファ +5s
-    console.log(`   ⏳ 429: ${wait}s 待機して retry (attempt=${attempt + 1})`);
-    await sleep(wait * 1000);
-  }
-  throw new Error("429 が 5 回連続で続いたので断念");
+function apiRequest(method, pathStr, body) {
+  return withRateLimitRetry(() => rawRequest(method, pathStr, body));
 }
 
 async function main() {
