@@ -1,19 +1,5 @@
 "use strict";
 
-// ========== \u72b6\u614b\u7ba1\u7406 ==========
-const state = {
-  screen: Screens.LOGIN,
-  authenticated: false,
-  bookmarks: [],
-  filteredBookmarks: [],
-  loading: false,
-  selectedCollection: null,
-  themeMode: null,
-  linkOpenMode: null,
-  collections: [],
-  searchQuery: "",
-};
-
 // ========== \u30d8\u30eb\u30d1\u30fc ==========
 
 function debounce(fn, ms) {
@@ -41,11 +27,19 @@ function isBookmarksCacheFresh(cache, now = Date.now()) {
   return Number.isFinite(age) && age >= 0 && age < ttlMs;
 }
 
-// ========== DOM \u53c2\u7167 ==========
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-
 document.addEventListener("DOMContentLoaded", async () => {
+  // 画面の状態と DOM 参照は、この popup のイベント処理だけで共有する。
+  const state = {
+    bookmarks: [],
+    loading: false,
+    selectedCollection: null,
+    linkOpenMode: null,
+    collections: [],
+    searchQuery: "",
+  };
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => document.querySelectorAll(sel);
+
   const screenLogin = $("#screen-login");
   const screenMain = $("#screen-main");
   const screenSettings = $("#screen-settings");
@@ -76,11 +70,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     screenLogin.hidden = name !== Screens.LOGIN;
     screenMain.hidden = name !== Screens.MAIN;
     screenSettings.hidden = name !== Screens.SETTINGS;
-    state.screen = name;
   }
 
   function applyTheme(mode) {
-    state.themeMode = mode;
     document.documentElement.classList.remove("light", "dark");
     if (mode === ThemeMode.LIGHT) {
       document.documentElement.classList.add("light");
@@ -101,16 +93,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== \u30d6\u30c3\u30af\u30de\u30fc\u30af\u4e00\u89a7\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0 ==========
 
+  const bookmarkItems = new WeakMap();
+
   function createBookmarkItem(item, index = 0, animate = true) {
     const li = document.createElement("li");
-    li.className = "bookmark-item";
-    li.title = item.title;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "bookmark-item";
+    button.title = item.title;
     // 先頭 ~30 件のみスタッガード・フェードイン。31 件目以降は no-anim で即表示
     // (--i 未設定だと既定値 0 の delay で全件が一斉アニメーションしてしまうため)
     if (animate && index < 30) {
-      li.style.setProperty("--i", String(index));
+      button.style.setProperty("--i", String(index));
     } else {
-      li.classList.add("no-anim");
+      button.classList.add("no-anim");
     }
 
     const favicon = document.createElement("img");
@@ -129,18 +125,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     domain.className = "bookmark-domain";
     domain.textContent = item.domain;
 
-    li.append(favicon, title, domain);
-    li.addEventListener("click", () => {
-      if (state.linkOpenMode === LinkOpenMode.CURRENT) {
-        chrome.tabs.update({ url: item.link });
-        window.close();
-      } else {
-        chrome.tabs.create({ url: item.link });
-      }
-    });
-
+    button.append(favicon, title, domain);
+    bookmarkItems.set(button, item);
+    li.appendChild(button);
     return li;
   }
+
+  bookmarkList.addEventListener("click", (event) => {
+    const button = event.target.closest(".bookmark-item");
+    const item = bookmarkItems.get(button);
+    if (!item) return;
+    if (state.linkOpenMode === LinkOpenMode.CURRENT) {
+      chrome.tabs.update({ url: item.link });
+      window.close();
+    } else {
+      chrome.tabs.create({ url: item.link });
+    }
+  });
 
   function renderBookmarks(items, animate = false) {
     bookmarkList.innerHTML = "";
@@ -157,20 +158,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const fragment = document.createDocumentFragment();
     items.forEach((item, i) => fragment.appendChild(createBookmarkItem(item, i, animate)));
     bookmarkList.appendChild(fragment);
-  }
-
-  /**
-   * \u30d5\u30a3\u30eb\u30bf\u9069\u7528\u3068\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u306e\u5171\u901a\u5f15\u304d\u8fbc\u307f\u3002
-   * animate=true \u306f\u300c\u521d\u3081\u3066\u8868\u793a\u3059\u308b\u300d\u5834\u9762\u3060\u3051\u306b\u4ed8\u3051\u308b\u3002
-   * \u30ad\u30e3\u30c3\u30b7\u30e5\u8868\u793a\u5f8c\u306e\u5dee\u5206\u66f4\u65b0\u3084\u4e2d\u9593\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0\u306f animate=false \u3067\u4e8c\u91cd\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3\u3092\u9632\u3050\u3002
-   */
-  function rerender(animate = false) {
-    if (state.searchQuery) {
-      applyFilter(animate);
-    } else {
-      state.filteredBookmarks = state.bookmarks;
-      renderBookmarks(state.bookmarks, animate);
-    }
   }
 
   // ========== \u30ed\u30fc\u30c7\u30a3\u30f3\u30b0\u8868\u793a ==========
@@ -200,7 +187,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function loadBookmarks(reset = false) {
     if (reset) {
       state.bookmarks = [];
-      state.filteredBookmarks = [];
       state.searchQuery = "";
       searchInput.value = "";
       bookmarkList.innerHTML = "";
@@ -233,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.bookmarks = (result.items || []).map(normalize);
 
     resetLoading();
-    rerender();
+    applyFilter();
   }
 
   /**
@@ -288,9 +274,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function resetToLoginScreen() {
     loadGeneration++;
     resetLoading();
-    state.authenticated = false;
     state.bookmarks = [];
-    state.filteredBookmarks = [];
     state.collections = [];
     state.selectedCollection = null;
     state.searchQuery = "";
@@ -303,16 +287,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ========== \u691c\u7d22\u30d5\u30a3\u30eb\u30bf ==========
 
+  // 初回表示や検索だけアニメーションし、取得後の差分更新では繰り返さない。
   function applyFilter(animate = false) {
     const q = state.searchQuery.toLowerCase();
-    if (!q) {
-      state.filteredBookmarks = state.bookmarks;
-    } else {
-      state.filteredBookmarks = state.bookmarks.filter(
+    const filteredBookmarks = q
+      ? state.bookmarks.filter(
         (b) => b._titleLower.includes(q) || b._domainLower.includes(q),
-      );
-    }
-    renderBookmarks(state.filteredBookmarks, animate);
+      )
+      : state.bookmarks;
+    renderBookmarks(filteredBookmarks, animate);
   }
 
   const onSearchInput = debounce(() => {
@@ -346,7 +329,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function createCollectionItem(col, depth) {
-    const div = document.createElement("div");
+    const div = document.createElement("button");
+    div.type = "button";
     div.className = "collection-item";
     const selectedId = state.selectedCollection?._id ?? 0;
     if (col._id === selectedId) {
@@ -395,7 +379,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const res = await sendMessage({ action: Actions.LOGIN });
       if (res?.ok) {
-        state.authenticated = true;
         // 別アカウントでログインし直した場合に前ユーザーの一覧・選択コレクションを持ち越さない
         await clearUserScopedStorage();
         state.selectedCollection = null;
@@ -492,7 +475,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   collectionName.textContent = state.selectedCollection?.title || "\u3059\u3079\u3066";
 
   if (authRes?.authenticated) {
-    state.authenticated = true;
     showScreen(Screens.MAIN);
 
     // \u9078\u629e\u4e2d\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u306e\u30ad\u30e3\u30c3\u30b7\u30e5\u304c\u3042\u308c\u3070\u5373\u5ea7\u306b\u8868\u793a\u3059\u308b\u3002
@@ -506,9 +488,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (cacheMatchesSelection) {
       state.bookmarks = cache.items.map(normalize);
-      state.filteredBookmarks = state.bookmarks;
       // \u30ad\u30e3\u30c3\u30b7\u30e5\u521d\u56de\u8868\u793a\u306f\u300c\u521d\u3081\u3066\u898b\u305b\u308b\u300d\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3
-      renderBookmarks(state.filteredBookmarks, true);
+      renderBookmarks(state.bookmarks, true);
       if (!isBookmarksCacheFresh(cache)) {
         loadBookmarks(false);
       }

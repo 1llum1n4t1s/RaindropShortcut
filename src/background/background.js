@@ -472,7 +472,7 @@ async function fetchAllBookmarks(
   const first = await fetchBookmarks(collectionId, 0, expectedGeneration);
   if (first.error) return first;
 
-  let items = first.items || [];
+  const items = first.items || [];
   const totalCount = typeof first.count === "number" ? first.count : items.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / SharedConfig.PER_PAGE));
 
@@ -493,7 +493,7 @@ async function fetchAllBookmarks(
     const results = await Promise.all(pages);
     for (const result of results) {
       if (result.error) return result;
-      items = items.concat(result.items || []);
+      for (const item of result.items || []) items.push(item);
     }
   }
 

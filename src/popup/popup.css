@@ -586,6 +586,8 @@ body::after {
 .bookmark-item {
   position: relative;
   display: flex;
+  width: 100%;
+  text-align: left;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -794,6 +796,8 @@ body::after {
 .collection-item {
   position: relative;
   display: flex;
+  width: 100%;
+  text-align: left;
   align-items: center;
   padding: 10px 14px;
   font-size: 12.5px;
@@ -806,6 +810,12 @@ body::after {
 
 .collection-item + .collection-item {
   border-top: 1px solid var(--rule);
+}
+
+.bookmark-item:focus-visible,
+.collection-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .collection-item:hover {
