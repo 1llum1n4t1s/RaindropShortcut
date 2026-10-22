@@ -12,8 +12,8 @@ importers:
   .:
     devDependencies:
       '@kagayoi/support-extension':
-        specifier: 1.0.6
-        version: 1.0.6
+        specifier: 1.0.8
+        version: 1.0.8
       chrome-webstore-upload-cli:
         specifier: ^4.0.2
         version: 4.0.2
@@ -500,8 +500,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@kagayoi/support-extension@1.0.6':
-    resolution: {integrity: sha512-nxQqhZWbfXDrmjDg8dKk4/RU7IUXyTkQ7XlcKwKNLR+srCX+KzsMEPETOsa35vDL4cQ4fWqrxl6rW8ddE/sYDQ==}
+  '@kagayoi/support-extension@1.0.8':
+    resolution: {integrity: sha512-NbEvdncBUrKG7suocyhbeO+B1QSURBaEg6OL7n6EoR0EeDKAJyOJiY37tIVUbDrtTM9A/CaOMd13/MrVwLDWeA==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -2141,7 +2141,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@kagayoi/support-extension@1.0.6': {}
+  '@kagayoi/support-extension@1.0.8': {}
 
   '@mdn/browser-compat-data@8.1.4': {}
 

@@ -32,6 +32,71 @@
     "origin not allowed": "このサイトからは現在送信できません。",
   }
 
+  const ENGLISH = {
+    "このサイト": "this site",
+    "お問い合わせ": "Contact support",
+    "閉じる": "Close",
+    "お問い合わせフォーム": "Contact form",
+    "{product}へのお問い合わせフォーム": "Contact form for {product}",
+    "intro": "Send bug reports, questions, feature requests, or other inquiries about ",
+    "introAfter": ". To verify your reply address, enter the six-digit code sent by email the first time you contact us.",
+    "お名前": "Name",
+    "（任意）": "(optional)",
+    "メールアドレス": "Email address",
+    "お問い合わせ種別": "Category",
+    "使い方・ご質問": "Help and questions",
+    "不具合のご報告": "Bug report",
+    "機能のご要望": "Feature request",
+    "料金・ご依頼": "Billing and requests",
+    "その他": "Other",
+    "件名": "Subject",
+    "お問い合わせ内容": "Message",
+    "6桁の確認コード": "Six-digit verification code",
+    "コードは10分間有効です。届かない場合は迷惑メールフォルダーもご確認ください。": "The code is valid for 10 minutes. If it does not arrive, check your spam folder.",
+    "確認コードを再送する": "Resend verification code",
+    "確認コードを送信": "Send verification code",
+    "送信しています…": "Sending…",
+    "お問い合わせを受け付けました": "Your inquiry has been received",
+    "受付番号を控えてください。": "Please save your reference number.",
+    "同じメールアドレスでログインすると、返信と対応状況を ": "Sign in with the same email address to view replies and your inquiry status on ",
+    " で確認できます。": ".",
+    "別のお問い合わせを送る": "Send another inquiry",
+    "認証して問い合わせを送信": "Verify and send inquiry",
+    "{email} へ確認コードを送りました。": "A verification code has been sent to {email}.",
+    "問い合わせを送信": "Send inquiry",
+    "{email} は認証済みです。": "{email} is verified.",
+    "お問い合わせ情報の送信には Firefox の許可が必要です。": "Firefox permission is required to send your inquiry information.",
+    "Firefox のデータ送信許可を確認できませんでした。": "Could not check Firefox permission to send inquiry information.",
+    "メールアドレスを確認してください。": "Please check your email address.",
+    "短時間に送信が集中しています。少し時間を置いてからお試しください。": "Too many requests. Please wait a while and try again.",
+    "確認メールを送信できませんでした。時間を置いてからお試しください。": "Could not send the verification email. Please try again later.",
+    "確認コードが正しくありません。": "The verification code is incorrect.",
+    "確認コードの期限が切れたか、入力回数の上限に達しました。新しいコードを取得してください。": "The verification code has expired or too many attempts were made. Please request a new code.",
+    "この確認コードは使用済みです。新しいコードを取得してください。": "This verification code has already been used. Please request a new code.",
+    "認証の有効期限が切れました。確認コードを取得し直してください。": "Your verification has expired. Please request a new code.",
+    "入力内容を確認してください。": "Please check the information you entered.",
+    "入力内容が長すぎます。": "The information you entered is too long.",
+    "お問い合わせ先を確認できませんでした。": "Could not identify the product you are contacting us about.",
+    "お問い合わせ内容が長すぎます。": "Your inquiry is too long.",
+    "このサイトからは現在送信できません。": "Inquiries cannot currently be sent from this site.",
+    "通信できませんでした。接続を確認して、もう一度お試しください。": "Could not connect. Please check your connection and try again.",
+    "送信できませんでした。時間を置いてからお試しください。": "Could not send your inquiry. Please try again later.",
+    "必須項目を入力してください。": "Please fill out this required field.",
+    "6桁の数字で確認コードを入力してください。": "Please enter the six-digit verification code.",
+  }
+
+  function uiLanguage(host) {
+    const api = globalThis.browser ?? globalThis.chrome
+    const tag = host.closest("[lang]")?.getAttribute("lang")?.trim()
+      || document.documentElement.lang?.trim() || api?.i18n?.getUILanguage?.() || "ja"
+    return /^ja(?:-|$)/i.test(tag) ? "ja" : "en"
+  }
+
+  function translate(language, message, values = {}) {
+    const text = language === "en" ? ENGLISH[message] || message : message
+    return text.replace(/\{(\w+)\}/g, (match, key) => values[key] ?? match)
+  }
+
   function bundledStylesheetUrl(fileName) {
     const api = typeof browser !== "undefined" ? browser : typeof chrome !== "undefined" ? chrome : null
     if (api?.runtime?.getURL) return api.runtime.getURL(`src/shared/${fileName}`)
@@ -69,8 +134,9 @@
 
     connectedCallback() {
       if (this.shadowRoot.childElementCount) return
+      this.language = uiLanguage(this)
       this.productId = this.getAttribute("product-id")?.trim() ?? ""
-      this.productName = this.getAttribute("product-name")?.trim() || "このサイト"
+      this.productName = this.getAttribute("product-name")?.trim() || this.t("このサイト")
       this.apiBase = (this.getAttribute("api-base")?.trim() || DEFAULT_API_BASE).replace(/\/$/, "")
       const requestedChannel = this.getAttribute("channel")?.trim().toLowerCase() || "web"
       const requestedStorage = this.getAttribute("storage")?.trim().toLowerCase() || "session"
@@ -85,54 +151,58 @@
       this.syncAuthState()
     }
 
+    t(message, values) {
+      return translate(this.language, message, values)
+    }
+
     render() {
       const id = this.instanceId
       replaceShadowContent(this.shadowRoot, FORM_STYLESHEET_URL, `
-        <form class="panel" novalidate aria-label="お問い合わせフォーム">
-          <p class="intro"><strong class="product-name"></strong>について、不具合・ご質問・ご要望・ご依頼を送信できます。返信先の確認のため、初回はメールで届く6桁のコードを入力してください。</p>
+        <form class="panel" novalidate aria-label="${this.t("お問い合わせフォーム")}">
+          <p class="intro">${this.language === "en" ? this.t("intro") : ""}<strong class="product-name"></strong>${this.language === "en" ? this.t("introAfter") : "について、不具合・ご質問・ご要望・ご依頼を送信できます。返信先の確認のため、初回はメールで届く6桁のコードを入力してください。"}</p>
           <div class="grid">
             <div class="field">
-              <label for="${id}-name">お名前 <span class="optional">（任意）</span></label>
+              <label for="${id}-name">${this.t("お名前")} <span class="optional">${this.t("（任意）")}</span></label>
               <input id="${id}-name" name="customerName" type="text" autocomplete="name" maxlength="100">
             </div>
             <div class="field">
-              <label for="${id}-email">メールアドレス</label>
+              <label for="${id}-email">${this.t("メールアドレス")}</label>
               <input id="${id}-email" name="email" type="email" autocomplete="email" inputmode="email" maxlength="254" required>
             </div>
             <div class="field field--full">
-              <label for="${id}-category">お問い合わせ種別</label>
+              <label for="${id}-category">${this.t("お問い合わせ種別")}</label>
               <select id="${id}-category" name="category" required>
-                ${CATEGORIES.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}
+                ${CATEGORIES.map(([value, label]) => `<option value="${value}">${this.t(label)}</option>`).join("")}
               </select>
             </div>
             <div class="field field--full">
-              <label for="${id}-subject">件名</label>
+              <label for="${id}-subject">${this.t("件名")}</label>
               <input id="${id}-subject" name="subject" type="text" maxlength="160" required>
             </div>
             <div class="field field--full">
-              <label for="${id}-description">お問い合わせ内容</label>
+              <label for="${id}-description">${this.t("お問い合わせ内容")}</label>
               <textarea id="${id}-description" name="description" maxlength="10000" required></textarea>
             </div>
             <div class="verification" hidden>
               <div class="field">
-                <label for="${id}-code">6桁の確認コード</label>
+                <label for="${id}-code">${this.t("6桁の確認コード")}</label>
                 <input id="${id}-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6">
               </div>
-              <p>コードは10分間有効です。届かない場合は迷惑メールフォルダーもご確認ください。<br><button class="resend" type="button">確認コードを再送する</button></p>
+              <p>${this.t("コードは10分間有効です。届かない場合は迷惑メールフォルダーもご確認ください。")}<br><button class="resend" type="button">${this.t("確認コードを再送する")}</button></p>
             </div>
           </div>
           <div class="actions">
-            <button class="submit" type="submit">確認コードを送信</button>
+            <button class="submit" type="submit">${this.t("確認コードを送信")}</button>
             <p class="auth-note" hidden></p>
           </div>
           <p class="status" role="status" aria-live="polite"></p>
         </form>
         <section class="success" hidden tabindex="-1" aria-live="polite">
-          <h2>お問い合わせを受け付けました</h2>
-          <p>受付番号を控えてください。</p>
+          <h2>${this.t("お問い合わせを受け付けました")}</h2>
+          <p>${this.t("受付番号を控えてください。")}</p>
           <p class="reference"></p>
-          <p>同じメールアドレスでログインすると、返信と対応状況を <a href="https://support.kagayoi.com/tickets" target="_blank" rel="noopener">Kagayoi Support</a> で確認できます。</p>
-          <button class="again" type="button">別のお問い合わせを送る</button>
+          <p>${this.t("同じメールアドレスでログインすると、返信と対応状況を ")}<a href="https://support.kagayoi.com/tickets" target="_blank" rel="noopener">Kagayoi Support</a>${this.t(" で確認できます。")}</p>
+          <button class="again" type="button">${this.t("別のお問い合わせを送る")}</button>
         </section>
       `)
       this.form = this.shadowRoot.querySelector("form")
@@ -145,10 +215,13 @@
       this.status = this.shadowRoot.querySelector(".status")
       this.authNote = this.shadowRoot.querySelector(".auth-note")
       this.shadowRoot.querySelector(".product-name").textContent = this.productName
-      this.form.setAttribute("aria-label", `${this.productName}へのお問い合わせフォーム`)
+      this.form.setAttribute("aria-label", this.t("{product}へのお問い合わせフォーム", { product: this.productName }))
+      this.form.lang = this.language
     }
 
     bindEvents() {
+      this.form.addEventListener("input", (event) => event.target.setCustomValidity?.(""))
+      this.form.addEventListener("change", (event) => event.target.setCustomValidity?.(""))
       this.form.addEventListener("submit", (event) => {
         event.preventDefault()
         void this.handleSubmit()
@@ -171,10 +244,7 @@
         return
       }
       if (this.codeRequestedFor === this.normalizedEmail()) {
-        if (!this.code.checkValidity()) {
-          this.code.reportValidity()
-          return
-        }
+        if (!this.validateControl(this.code)) return
         await this.verifyAndCreate()
         return
       }
@@ -183,19 +253,25 @@
 
     validateTicketFields() {
       for (const control of [this.email, this.form.elements.category, this.form.elements.subject, this.form.elements.description]) {
-        if (!control.checkValidity()) {
-          control.reportValidity()
-          return false
-        }
+        if (!this.validateControl(control)) return false
       }
       return true
     }
 
+    validateControl(control) {
+      control.setCustomValidity("")
+      if (control.checkValidity()) return true
+      const message = control === this.code ? "6桁の数字で確認コードを入力してください。"
+        : control.validity.valueMissing ? "必須項目を入力してください。"
+        : control === this.email ? "メールアドレスを確認してください。"
+        : "入力内容を確認してください。"
+      control.setCustomValidity(this.t(message))
+      control.reportValidity()
+      return false
+    }
+
     async requestCode(consentChecked = false) {
-      if (this.busy || !this.email.checkValidity()) {
-        if (!this.email.checkValidity()) this.email.reportValidity()
-        return
-      }
+      if (this.busy || !this.validateControl(this.email)) return
       if (!consentChecked && !await this.ensureDataCollectionConsent()) return
       const email = this.normalizedEmail()
       await this.runBusy(async () => {
@@ -204,8 +280,8 @@
         this.verification.hidden = false
         this.code.required = true
         if (data.devCode && /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(this.apiBase)) this.code.value = data.devCode
-        this.submit.textContent = "認証して問い合わせを送信"
-        this.setStatus(`${email} へ確認コードを送りました。`, "success")
+        this.submit.textContent = this.t("認証して問い合わせを送信")
+        this.setStatus(this.t("{email} へ確認コードを送りました。", { email }), "success")
         this.code.focus()
       })
     }
@@ -265,9 +341,9 @@
           data_collection: FIREFOX_OPTIONAL_CONTACT_DATA_PERMISSIONS,
         })
         if (granted) return true
-        this.setStatus("お問い合わせ情報の送信には Firefox の許可が必要です。", "error")
+        this.setStatus(this.t("お問い合わせ情報の送信には Firefox の許可が必要です。"), "error")
       } catch {
-        this.setStatus("Firefox のデータ送信許可を確認できませんでした。", "error")
+        this.setStatus(this.t("Firefox のデータ送信許可を確認できませんでした。"), "error")
       }
       return false
     }
@@ -301,7 +377,7 @@
       this.busy = true
       this.submit.disabled = true
       this.resend.disabled = true
-      this.setStatus("送信しています…")
+      this.setStatus(this.t("送信しています…"))
       try {
         await action()
       } catch (error) {
@@ -333,6 +409,7 @@
     resetForm() {
       const email = this.normalizedEmail()
       this.form.reset()
+      for (const control of this.form.elements) control.setCustomValidity?.("")
       this.email.value = email
       this.resetVerification()
       this.success.hidden = true
@@ -344,6 +421,7 @@
 
     resetVerification() {
       this.codeRequestedFor = ""
+      this.code.setCustomValidity("")
       this.code.value = ""
       this.code.required = false
       this.verification.hidden = true
@@ -352,9 +430,9 @@
     syncAuthState() {
       if (this.codeRequestedFor) return
       const session = this.sessionForCurrentEmail()
-      this.submit.textContent = session ? "問い合わせを送信" : "確認コードを送信"
+      this.submit.textContent = session ? this.t("問い合わせを送信") : this.t("確認コードを送信")
       this.authNote.hidden = !session
-      this.authNote.textContent = session ? `${session.email} は認証済みです。` : ""
+      this.authNote.textContent = session ? this.t("{email} は認証済みです。", { email: session.email }) : ""
     }
 
     normalizedEmail() {
@@ -419,8 +497,8 @@
     }
 
     errorLabel(error) {
-      if (error.message === "network") return "通信できませんでした。接続を確認して、もう一度お試しください。"
-      return ERROR_LABELS[error.message] || "送信できませんでした。時間を置いてからお試しください。"
+      if (error.message === "network") return this.t("通信できませんでした。接続を確認して、もう一度お試しください。")
+      return this.t(ERROR_LABELS[error.message] || "送信できませんでした。時間を置いてからお試しください。")
     }
   }
 
@@ -552,14 +630,16 @@
 
     connectedCallback() {
       if (this.shadowRoot.childElementCount) return
+      this.language = uiLanguage(this)
+      const t = (message) => translate(this.language, message)
       const popupId = `kagayoi-support-popup-${++popupCount}`
       replaceShadowContent(this.shadowRoot, POPUP_STYLESHEET_URL, `
-        <button class="trigger" type="button" aria-haspopup="dialog" aria-controls="${popupId}">お問い合わせ</button>
+        <button class="trigger" type="button" aria-haspopup="dialog" aria-controls="${popupId}">${t("お問い合わせ")}</button>
         <dialog id="${popupId}" aria-labelledby="${popupId}-title">
           <div class="shell">
             <header class="header">
-              <h2 class="title" id="${popupId}-title">お問い合わせ</h2>
-              <button class="close" type="button" aria-label="閉じる">×</button>
+              <h2 class="title" id="${popupId}-title">${t("お問い合わせ")}</h2>
+              <button class="close" type="button" aria-label="${t("閉じる")}">×</button>
             </header>
             <div class="form-host"></div>
           </div>
@@ -568,11 +648,12 @@
       this.trigger = this.shadowRoot.querySelector(".trigger")
       this.dialog = this.shadowRoot.querySelector("dialog")
       this.form = document.createElement("kagayoi-contact-form")
+      this.form.setAttribute("lang", this.language)
       this.form.setAttribute("channel", "extension")
       this.form.setAttribute("storage", "local")
-      this.trigger.textContent = this.getAttribute("button-label")?.trim() || "お問い合わせ"
+      this.trigger.textContent = this.getAttribute("button-label")?.trim() || t("お問い合わせ")
       this.trigger.hidden = this.hasAttribute("hide-trigger")
-      this.shadowRoot.querySelector(".title").textContent = this.getAttribute("dialog-title")?.trim() || "お問い合わせ"
+      this.shadowRoot.querySelector(".title").textContent = this.getAttribute("dialog-title")?.trim() || t("お問い合わせ")
       for (const name of ["product-id", "product-name", "api-base", "app-version", "os-version", "locale", "diagnostics", "firefox-data-consent"]) {
         if (this.hasAttribute(name)) this.form.setAttribute(name, this.getAttribute(name))
       }

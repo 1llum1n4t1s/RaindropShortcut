@@ -59,9 +59,10 @@
     return api.runtime.getURL("").startsWith("moz-extension://")
   }
 
-  function uiLanguage(api) {
-    const tag = api?.i18n?.getUILanguage?.() || navigator.language || "en"
-    return tag.toLowerCase().startsWith("ja") ? "ja" : "en"
+  function uiLanguage(host, api) {
+    const tag = host.closest("[lang]")?.getAttribute("lang")?.trim()
+      || document.documentElement.lang?.trim() || api?.i18n?.getUILanguage?.() || "ja"
+    return /^ja(?:-|$)/i.test(tag) ? "ja" : "en"
   }
 
   /**
@@ -73,7 +74,7 @@
     if (fromAttribute) return fromAttribute
     const fromLocale = api?.i18n?.getMessage?.(messageKey)?.trim()
     if (fromLocale) return fromLocale
-    return LABELS[uiLanguage(api)][fallbackKey]
+    return LABELS[uiLanguage(host, api)][fallbackKey]
   }
 
   /**
@@ -146,6 +147,7 @@
       button.textContent = label(this, api, "contact-label", "kagayoiSupportContact", "contact")
 
       this.popup = document.createElement("kagayoi-contact-popup")
+      this.popup.setAttribute("lang", uiLanguage(this, api))
       this.popup.setAttribute("hide-trigger", "")
       this.popup.setAttribute("product-id", this.getAttribute("product-id")?.trim() ?? "")
       const dialogTitle = this.getAttribute("dialog-title")?.trim() || button.textContent
