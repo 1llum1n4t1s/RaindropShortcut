@@ -8,7 +8,7 @@ allowBuilds:
 
 # 検証済みの更新だけ、公開直後 24 時間の待機対象から版指定で除外する。
 minimumReleaseAgeExclude:
-  - '@kagayoi/support-extension@1.0.8'
+  - '@kagayoi/support-extension@1.0.9'
   - puppeteer@25.7.0
   - puppeteer-core@25.7.0
   - miniflare@5.20260926.1-alpha
