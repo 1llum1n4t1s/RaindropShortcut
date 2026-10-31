@@ -36,6 +36,8 @@ docs/                   # privacy-policy.md など
 scripts/                # 開発用スクリプト
   ├── generate-icons.js          # icons/icon.svg → PNG (sharp)
   ├── stage-extension.js         # Chrome / Firefox 共通の配布ファイル配置
+  ├── verify-extension-package.js # 提出 ZIP / XPI の版・構成・SHA-256 を確認
+  ├── sign-extension.mjs         # 実生成 XPI を検証後、同じファイルを AMO へ提出
   ├── amo-common.js              # AMO JWT 生成・429 再試行の共通処理
   ├── amo-metadata-update.js     # AMO API v5 で name/summary/description/privacy_policy を一括 PATCH
   └── amo-previews-upload.js     # AMO previews multipart upload (rate limit 重く実用は Dev Hub 手動)
@@ -146,8 +148,8 @@ if ($LASTEXITCODE -ne 0) { throw "Firefox staging failed." }
 # 2. web-ext sign で AMO submission API 経由 upload
 $env:WEB_EXT_API_KEY = "user:..."
 $env:WEB_EXT_API_SECRET = "..."
-pnpm exec web-ext sign --source-dir=firefox-build --artifacts-dir=web-ext-artifacts `
-  --channel=listed --amo-metadata=.amo-metadata.json --no-input
+$releaseVersion = (Get-Content -LiteralPath manifest.json -Raw | ConvertFrom-Json).version
+node scripts/sign-extension.mjs firefox-build web-ext-artifacts $releaseVersion
 ```
 
 - `.amo-metadata.json` の `license` は **`version.license` (nested)** で渡す (top-level だと "This field, or custom_license, is required for listed versions." エラー)

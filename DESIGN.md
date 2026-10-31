@@ -47,6 +47,8 @@ favicon はドメイン名を Google Favicon Service へ送り、フォントは
 
 manifest の公開鍵 `key` はローカル Chrome の拡張 ID と OAuth redirect URI を一定にするため保持し、配布時に除去する。配布スクリプトは未作成または空でリンクではない出力ディレクトリへ manifest・PNG アイコン・`src/` のみを配置する。開発依存やストア画像を含めない方式を Chrome/Firefox と手動/CI で共有する。
 
+ストア提出前に `scripts/verify-extension-package.js` が実 ZIP/XPI の版・manifest・全配布ファイルの内容を正本と照合し、SHA-256 を出力する。Firefox は `scripts/sign-extension.mjs` が web-ext の公開 API の提出 hook で実生成 XPI を検証し、同じファイルを提出する。検証済みハッシュと結び付かない既存の `.amo-upload-uuid` は再利用せず停止する。AMO が後で署名・再包装する配信物は、提出物とは別に識別する。
+
 既存の `tests/` は Node.js の組み込みテストでキャッシュ、セッション競合、トークン再試行、popup の世代管理、問い合わせ・プライバシー契約を確認する。ブラウザ上の OAuth と画面操作の最終確認は別途必要になる。
 
 ## 開発依存のセキュリティ検証
