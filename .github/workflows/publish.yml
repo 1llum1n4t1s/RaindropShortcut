@@ -39,13 +39,13 @@ jobs:
       - name: pnpm セットアップ
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
-          version: 11
+          version: '12.16.1'
 
       - name: Node セットアップ
         # actions/setup-node v7.1.0 (commit SHA で固定)
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '22'
+          node-version: '26.13.0'
           cache: 'pnpm'
 
       - name: 依存インストール
@@ -62,6 +62,11 @@ jobs:
           (cd "$BUILD_DIR" && zip -r "$OLDPWD/raindrop-shortcut.zip" .)
           rm -rf "$BUILD_DIR"
           ls -lh raindrop-shortcut.zip
+
+      - name: 提出する Chrome ZIP の版・構成・ハッシュを確認
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/verify-extension-package.js raindrop-shortcut.zip chrome "$RELEASE_VERSION"
 
       - name: Chrome Web Store にアップロード & 公開
         # chrome-webstore-upload-cli v4: 認証情報は CLI フラグ廃止・環境変数のみ
@@ -114,13 +119,13 @@ jobs:
       - name: pnpm セットアップ
         uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
-          version: 11
+          version: '12.16.1'
 
       - name: Node セットアップ
         # actions/setup-node v7.1.0 (commit SHA で固定)
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: '22'
+          node-version: '26.13.0'
           cache: 'pnpm'
 
       - name: 依存インストール
@@ -135,18 +140,13 @@ jobs:
           ls -la firefox-build
 
       - name: AMO へ submission
-        # web-ext は devDep に exact pin (package.json で固定)。supply chain 対策で pnpm exec (ローカル依存のみ実行)。
-        # --approval-timeout=0: submission 受理直後に exit (AMO 側の signing 完了は待たない、配信は Mozilla 自動)。
+        # exact pin した web-ext の公開 API で、生成 XPI の実物検証後に同じ path を提出する。
+        # approvalTimeout=0: submission 受理直後に終了 (AMO 側の signing 完了は待たない)。
         # 同 version 重複 push 時は AMO 側で reject される (新バージョンのみ submission 可)。
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          pnpm exec web-ext sign \
-            --source-dir=firefox-build \
-            --artifacts-dir=web-ext-artifacts \
-            --channel=listed \
-            --amo-metadata=.amo-metadata.json \
-            --no-input \
-            --approval-timeout=0
+          node scripts/sign-extension.mjs firefox-build web-ext-artifacts "$RELEASE_VERSION"
           echo "🦊 Firefox AMO への submission を送信したよ〜"
