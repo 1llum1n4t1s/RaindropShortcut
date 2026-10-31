@@ -85,8 +85,8 @@ function createHarness({
       onChanged,
     },
     alarms: {
-      get(name, callback) {
-        callback(alarms.get(name));
+      async get(name) {
+        return alarms.get(name);
       },
       create(name, info) {
         alarms.set(name, { name, ...info });
@@ -471,34 +471,60 @@ test("ログアウト前のブックマーク取得を新しいセッション�
   assert.equal(harness.storage.bookmarksCache.items[0].title, "新アカウント");
 });
 
-test("ログアウト前に開始した API 応答をセッション変更後に返さない", async () => {
-  let releaseFetch;
-  let markFetchStarted;
-  const fetchStarted = new Promise((resolve) => {
-    markFetchStarted = resolve;
+for (const pendingStage of ["fetch", "json"]) {
+  test(`ログアウト前に開始した API 応答をセッション変更後に返さない (${pendingStage})`, async () => {
+    let releaseResponse;
+    let markResponsePending;
+    const responsePending = new Promise((resolve) => {
+      markResponsePending = resolve;
+    });
+    const waitForRelease = new Promise((resolve) => {
+      releaseResponse = resolve;
+    });
+    const harness = createHarness({
+      fetchHandler: async () => {
+        if (pendingStage === "fetch") {
+          markResponsePending();
+          await waitForRelease;
+        }
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            if (pendingStage === "json") {
+              markResponsePending();
+              await waitForRelease;
+            }
+            return { items: [{ _id: 1, title: "旧アカウント" }] };
+          },
+        };
+      },
+    });
+
+    const pending = harness.run('apiFetch("/rest/v1/collections")');
+    await responsePending;
+    await harness.run("clearTokens()");
+    releaseResponse();
+    const result = await pending;
+
+    assert.equal(result.error, "unauthorized");
   });
-  const waitForRelease = new Promise((resolve) => {
-    releaseFetch = resolve;
-  });
+}
+
+test("API 応答の JSON 解析失敗は呼び出し元へ伝える", async () => {
+  const parseError = new SyntaxError("ダミー応答の解析失敗");
   const harness = createHarness({
-    fetchHandler: async () => {
-      markFetchStarted();
-      await waitForRelease;
-      return {
-        ok: true,
-        status: 200,
-        async json() {
-          return { items: [{ _id: 1, title: "旧アカウント" }] };
-        },
-      };
-    },
+    fetchHandler: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        throw parseError;
+      },
+    }),
   });
 
-  const pending = harness.run('apiFetch("/rest/v1/collections")');
-  await fetchStarted;
-  await harness.run("clearTokens()");
-  releaseFetch();
-  const result = await pending;
-
-  assert.equal(result.error, "unauthorized");
+  await assert.rejects(
+    harness.run('apiFetch("/rest/v1/collections")'),
+    (error) => error === parseError,
+  );
 });

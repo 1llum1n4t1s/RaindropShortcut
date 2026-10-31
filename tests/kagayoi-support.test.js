@@ -14,6 +14,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const { spawnSync } = require("node:child_process");
 
 const ROOT = path.join(__dirname, "..");
 const SETTINGS_HTML = "src/popup/popup.html";
@@ -35,17 +36,16 @@ test("設定画面へ共通のサポートフッターを組み込んでいる",
 });
 
 test("同梱した共通部品が正本の契約を満たす", () => {
+  const check = spawnSync(process.execPath, [
+    "--preserve-symlinks-main",
+    path.join(ROOT, "node_modules/@kagayoi/support-extension/bin/kagayoi-support-sync.mjs"),
+    "--check",
+  ], { cwd: ROOT, encoding: "utf8" });
+  assert.ifError(check.error);
+  assert.equal(check.status, 0, `${check.stdout}\n${check.stderr}`);
+
   const popupJs = read("src/shared/kagayoi-support-popup.js");
   const footerJs = read("src/shared/kagayoi-support-footer.js");
-
-  assert.match(popupJs, /const DEFAULT_API_BASE = "https:\/\/support\.kagayoi\.com"/);
-  assert.match(popupJs, /const API_TIMEOUT_MS = 15_000/);
-  assert.match(popupJs, /data_collection: FIREFOX_OPTIONAL_CONTACT_DATA_PERMISSIONS/);
-  assert.match(popupJs, /this\.form\.setAttribute\("channel", "extension"\)/);
-  assert.match(popupJs, /this\.form\.setAttribute\("storage", "local"\)/);
-  assert.match(popupJs, /customElements\.define\("kagayoi-contact-popup", KagayoiContactPopup\)/);
-  assert.match(footerJs, /customElements\.define\("kagayoi-support-footer", KagayoiSupportFooter\)/);
-  assert.match(footerJs, /chromewebstore\.google\.com\/detail\//);
 
   for (const [name, source] of [["popup", popupJs], ["footer", footerJs]]) {
     assert.doesNotMatch(source, /\.innerHTML\b/, `${name} も innerHTML を使わない`);

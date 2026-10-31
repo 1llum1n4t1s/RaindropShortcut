@@ -384,7 +384,11 @@ async function apiFetch(
     return { error: `API error: ${res.status}` };
   }
 
-  return res.json();
+  const json = await res.json();
+  if (auth.generation !== sessionGeneration) {
+    return { error: "unauthorized" };
+  }
+  return json;
 }
 
 async function fetchCollections() {
@@ -581,21 +585,8 @@ async function refreshSelectedBookmarksCache() {
   );
 }
 
-function getAlarm(name) {
-  return new Promise((resolve, reject) => {
-    chrome.alarms.get(name, (alarm) => {
-      const error = chrome.runtime.lastError;
-      if (error) {
-        reject(new Error(error.message));
-      } else {
-        resolve(alarm);
-      }
-    });
-  });
-}
-
 async function ensureBookmarksRefreshAlarm() {
-  const existing = await getAlarm(BOOKMARKS_REFRESH_ALARM);
+  const existing = await chrome.alarms.get(BOOKMARKS_REFRESH_ALARM);
   if (
     !existing ||
     existing.periodInMinutes !== SharedConfig.BOOKMARKS_REFRESH_INTERVAL_MINUTES

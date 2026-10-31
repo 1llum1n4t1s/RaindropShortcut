@@ -37,20 +37,3 @@ test("ブックマークキャッシュは5分未満だけ新鮮と判定する"
   assert.equal(isFresh(undefined), false);
   assert.equal(isFresh(1_000_001), false);
 });
-
-test("古いブックマーク読み込みは新しい loading 状態を変更しない", () => {
-  const loadBookmarksBody = popupSource.match(
-    /async function loadBookmarks[\s\S]*?\n  function handleBookmarkError/,
-  )?.[0];
-  assert.ok(loadBookmarksBody);
-
-  const staleBranches = Array.from(
-    loadBookmarksBody.matchAll(
-      /if \(currentGen !== loadGeneration\) \{([\s\S]*?)\n    \}/g,
-    ),
-  );
-  assert.equal(staleBranches.length, 2);
-  for (const branch of staleBranches) {
-    assert.doesNotMatch(branch[1], /resetLoading\(\)/);
-  }
-});

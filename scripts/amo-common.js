@@ -22,6 +22,7 @@ async function withRateLimitRetry(request) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const result = await request();
     if (result.status !== 429) return result;
+    if (attempt === 4) break;
     const detail = typeof result.body === "object" ? result.body?.detail : "";
     const match = /(\d+)\s*seconds?/i.exec(detail || "");
     const wait = (match ? parseInt(match[1], 10) : 30) + 5;
