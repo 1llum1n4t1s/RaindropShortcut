@@ -17,7 +17,7 @@ pnpm run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (p
 
 パッケージ作成 (配布ファイルの配置は `scripts/stage-extension.js <output-directory> <chrome|firefox>` に共通化):
 ```bash
-powershell -ExecutionPolicy Bypass -File zip.ps1   # raindrop-shortcut.zip を生成
+pwsh -ExecutionPolicy Bypass -File zip.ps1   # raindrop-shortcut.zip を生成
 bash zip.sh                                        # 同等 (bash 版)
 ```
 

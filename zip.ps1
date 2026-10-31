@@ -1,5 +1,5 @@
 # Raindrop Shortcut 拡張機能パッケージ生成スクリプト
-# 使い方: powershell -ExecutionPolicy Bypass -File zip.ps1
+# 使い方: pwsh -ExecutionPolicy Bypass -File zip.ps1
 
 
 # 検証済みの作業対象だけを標準APIで削除する。
