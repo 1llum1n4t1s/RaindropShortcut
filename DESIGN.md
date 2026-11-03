@@ -47,7 +47,7 @@ favicon はドメイン名を Google Favicon Service へ送り、フォントは
 
 manifest の公開鍵 `key` はローカル Chrome の拡張 ID と OAuth redirect URI を一定にするため保持し、配布時に除去する。配布スクリプトは未作成または空でリンクではない出力ディレクトリへ manifest・PNG アイコン・`src/` のみを配置する。開発依存やストア画像を含めない方式を Chrome/Firefox と手動/CI で共有する。
 
-ストア提出前に `scripts/verify-extension-package.js` が実 ZIP/XPI の版・manifest・全配布ファイルの内容を正本と照合し、SHA-256 を出力する。Firefox は `scripts/sign-extension.mjs` が web-ext の公開 API の提出 hook で実生成 XPI を検証し、同じファイルを提出する。検証済みハッシュと結び付かない既存の `.amo-upload-uuid` は再利用せず停止する。AMO が後で署名・再包装する配信物は、提出物とは別に識別する。
+ストア提出前に `scripts/verify-extension-package.js` が実 ZIP/XPI の版・manifest・全配布ファイルの内容を正本と照合し、SHA-256 を出力する。Firefox は最終XPIのverifier receiptに含まれるSHA-256を `scripts/Publish-Amo.ps1` へ渡し、同じsnapshotのhash・GUID・版を照合してHTTP提出する。検証済みハッシュと結び付かない既存の `.amo-upload-uuid` は再利用せず停止する。AMO が後で署名・再包装する配信物は、提出物とは別に識別する。
 
 既存の `tests/` は Node.js の組み込みテストでキャッシュ、セッション競合、トークン再試行、popup の世代管理、問い合わせ・プライバシー契約を確認する。ブラウザ上の OAuth と画面操作の最終確認は別途必要になる。
 
@@ -55,6 +55,6 @@ manifest の公開鍵 `key` はローカル Chrome の拡張 ID と OAuth redire
 
 `web-ext → @devicefarmer/adbkit → node-forge` は、上流の修正版 1.4.2 を lock file で解決する。RSA 署名検証で余分な ASN.1 要素を受理する [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) に対する 1.4.0 用の暫定パッチは、上流版へ移行して撤去した。
 
-`pnpm test` の先頭で `scripts/verify-node-forge.js` が web-ext から実際に解決される依存を読み、生成した一時鍵と合成データだけで正常署名・RSA-PSS・不正な DigestInfo の拒否を確認する。秘密鍵の保存や外部サービスへの送信は行わない。
+`bun --bun run test` の先頭で `scripts/verify-node-forge.js` が web-ext から実際に解決される依存を読み、生成した一時鍵と合成データだけで正常署名・RSA-PSS・不正な DigestInfo の拒否を確認する。秘密鍵の保存や外部サービスへの送信は行わない。
 
 node-forge は拡張機能の配布物には含まれない。検証呼出しは adbkit の TCPUSB ブリッジにあり、既存の build / lint / sign はその経路を利用しない。上流版への移行はアプリの権限・保存データ・配信方式を変えない。

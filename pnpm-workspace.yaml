@@ -1,8 +1,0 @@
-# postinstall でネイティブビルドが必要な依存を明示許可（pnpm v10.12+ はここで管理）
-allowBuilds:
-  puppeteer: true
-  sharp: true
-
-# 検証済みの更新だけ、公開直後 24 時間の待機対象から版指定で除外する。
-minimumReleaseAgeExclude:
-  - '@kagayoi/support-extension@1.0.9'

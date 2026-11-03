@@ -1,0 +1,2 @@
+# パッチはLF固定。unified diffのcontext接頭辞と空行は書式として保持する。
+patches/*.patch text eol=lf -whitespace

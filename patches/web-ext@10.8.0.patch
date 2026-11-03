@@ -1,0 +1,13 @@
+diff --git a/lib/util/file-filter.js b/lib/util/file-filter.js
+index 693bca15f24cc8ce68093cbad1686927a5cf2e56..6778ebfaadf399ee255597cb536bb51b0c293c28 100644
+--- a/lib/util/file-filter.js
++++ b/lib/util/file-filter.js
+@@ -111,7 +111,7 @@ export class FileFilter {
+    */
+   wantFile(filePath) {
+     const resolvedPath = this.resolveWithSourceDir(filePath);
+-    const matches = multimatch(resolvedPath, this.filesToIgnore);
++    const matches = multimatch(resolvedPath, this.filesToIgnore, { windowsPathsNoEscape: process.platform === 'win32' });
+     if (matches.length > 0) {
+       log.debug(`FileFilter: ignoring file ${resolvedPath}`);
+       return false;

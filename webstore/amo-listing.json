@@ -1,0 +1,26 @@
+{
+  "default_locale": "ja",
+  "name": {
+    "ja": "Raindrop Shortcuts",
+    "en-US": "Raindrop Shortcuts"
+  },
+  "summary": {
+    "ja": "Raindrop.io のブックマークをツールバーからワンクリックで一覧表示。検索フィルタ・コレクション選択・ダークモード・リンク開き方の切り替えに対応した軽量拡張機能。",
+    "en-US": "One-click access to your Raindrop.io bookmarks from the toolbar. Search filter, collection picker, dark mode, and configurable link behavior. Lightweight and privacy-friendly."
+  },
+  "description": {
+    "ja": "Raindrop.io のブックマークをツールバーからワンクリックで呼び出せる Firefox 拡張機能です。\n\n### 主な機能\n\n- **ワンクリック一覧表示** — ツールバーのアイコンをクリックするだけでブックマークがコンパクトに表示\n- **コレクション選択** — 表示するフォルダ（コレクション）を設定画面で切り替え可能\n- **インクリメンタル検索** — タイトル・ドメイン名でリアルタイム絞り込み\n- **ダークモード** — OS 設定に自動追従または手動切り替え\n- **リンクの開き方切替** — 新しいタブ／現在のタブを設定で選択\n- **高速表示** — ローカルキャッシュから即時表示しバックグラウンドで差分更新\n\n### プライバシー\n\n- OAuth 2.0 認証なのでパスワード入力は不要\n- 個人情報は自動収集せず、お問い合わせ送信時だけ入力された連絡先と本文を Kagayoi Support へ送信\n- favicon 取得のためドメイン名のみ Google Favicon Service へ送信\n\nオープンソース ([MIT License](https://github.com/1llum1n4t1s/RaindropShortcut))",
+    "en-US": "A Firefox extension for one-click access to your Raindrop.io bookmarks from the toolbar.\n\n### Features\n\n- **One-click view** — click the toolbar icon to see your bookmarks in a compact list\n- **Collection picker** — choose which Raindrop collection to display from settings\n- **Incremental search** — instant filter by title and domain name\n- **Dark mode** — auto-follow OS theme or manual toggle\n- **Link behavior** — open in new tab or current tab (configurable)\n- **Fast display** — local cache for instant rendering, refreshed in the background\n\n### Privacy\n\n- OAuth 2.0 authentication, no password needed\n- No automatic collection of personal data; contact details and messages are sent to Kagayoi Support only when you submit the contact form\n- Only the domain name is sent to Google Favicon Service for favicon rendering\n\nOpen source ([MIT License](https://github.com/1llum1n4t1s/RaindropShortcut))"
+  },
+  "homepage": {
+    "ja": "https://github.com/1llum1n4t1s/RaindropShortcut",
+    "en-US": "https://github.com/1llum1n4t1s/RaindropShortcut"
+  },
+  "support_url": {
+    "ja": "https://github.com/1llum1n4t1s/RaindropShortcut/issues",
+    "en-US": "https://github.com/1llum1n4t1s/RaindropShortcut/issues"
+  },
+  "privacy_policy": {
+    "en-US": "# Raindrop Shortcut Privacy Policy\n\nThis extension does not automatically collect personal information. It receives an email address and optional name only when a user enters them and submits the contact form.\n\n## Data stored locally\n\n- OAuth access / refresh tokens (for Raindrop.io authentication)\n- Currently selected collection\n- Theme preference (auto / light / dark)\n- Link open mode preference\n- Bookmark list local cache (TTL 5 minutes)\n- Kagayoi Support contact session in window.localStorage (email address, support access token, and expiration)\n\nThese values are stored locally. OAuth tokens and bookmark or collection data are used only for Raindrop.io authentication and API communication. Only bookmark domain names are sent to Google Favicon Service as described below. The contact session persists across browser restarts for checking replies and is removed when it expires or Kagayoi Support rejects it. Logging out of Raindrop.io does not remove this separate support session.\n\n## Data sharing\n\nData is not sold or used or shared for advertising, analytics, or creditworthiness. Google Favicon Service receives bookmark domain names for favicon retrieval. Contact submissions are received only by Kagayoi Support and used only to respond to the inquiry.\n\n## Network communication\n\n- **raindrop.io** — OAuth authentication\n- **api.raindrop.io** — bookmark retrieval\n- **www.google.com** — only the domain name is sent for favicon retrieval\n- **fonts.googleapis.com / fonts.gstatic.com** — popup UI fonts (no user data sent)\n- **support.kagayoi.com** — contacted only when the user submits the contact form\n\n## Contact form\n\nOnly when the user submits the contact form, the extension sends the entered email address, optional name, inquiry category, subject, message, product ID, extension version, and locale to Kagayoi Support. It does not send bookmarks, collection data, or Raindrop.io authentication tokens.\n\n## Permission rationale\n\n- **identity**: Raindrop.io OAuth flow\n- **storage**: local storage of settings and cache\n- **alarms**: refresh the selected collection's bookmark cache every five minutes\n- **host_permissions (api.raindrop.io, raindrop.io)**: API communication\n- **host_permissions (support.kagayoi.com)**: email verification, contact submission, and retrieving the submission result after the user submits the form\n\nDetails: https://github.com/1llum1n4t1s/RaindropShortcut/blob/main/docs/privacy-policy.md"
+  }
+}

@@ -9,10 +9,10 @@ Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io 
 ## Build Commands
 
 ```bash
-pnpm run build                 # アイコン PNG + ストア画像を一括生成
-pnpm test                      # Node.js 組み込みテストを実行
-pnpm run generate-icons        # icons/icon.svg → icons/icon-{16,48,128}.png (sharp)
-pnpm run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (puppeteer)
+bun --bun run build                 # アイコン PNG + ストア画像を一括生成
+bun --bun run test                      # Bun の node:test 互換テストを実行
+bun --bun run generate-icons        # icons/icon.svg → icons/icon-{16,48,128}.png (sharp)
+bun --bun run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (puppeteer)
 ```
 
 パッケージ作成 (配布ファイルの配置は `scripts/stage-extension.js <output-directory> <chrome|firefox>` に共通化):
@@ -21,7 +21,7 @@ pwsh -ExecutionPolicy Bypass -File zip.ps1   # raindrop-shortcut.zip を生成
 bash zip.sh                                        # 同等 (bash 版)
 ```
 
-テストは Node.js 組み込みの `node:test` を使用。ブラウザ統合の最終動作確認は `chrome://extensions` に拡張機能を読み込んで手動テスト。
+テストは `node:test` を Bun の互換ランナーで実行する。ブラウザ統合の最終動作確認は `chrome://extensions` に拡張機能を読み込んで手動テスト。
 
 ## Source Layout
 
@@ -37,10 +37,10 @@ scripts/                # 開発用スクリプト
   ├── generate-icons.js          # icons/icon.svg → PNG (sharp)
   ├── stage-extension.js         # Chrome / Firefox 共通の配布ファイル配置
   ├── verify-extension-package.js # 提出 ZIP / XPI の版・構成・SHA-256 を確認
-  ├── sign-extension.mjs         # 実生成 XPI を検証後、同じファイルを AMO へ提出
-  ├── amo-common.js              # AMO JWT 生成・429 再試行の共通処理
-  ├── amo-metadata-update.js     # AMO API v5 で name/summary/description/privacy_policy を一括 PATCH
-  └── amo-previews-upload.js     # AMO previews multipart upload (rate limit 重く実用は Dev Hub 手動)
+  ├── Publish-Amo.ps1         # 実生成 XPI を検証後、同じファイルを AMO へ提出
+  ├── Amo-Http.psm1              # AMO JWT 生成・429 再試行の共通処理
+  ├── Update-AmoListing.ps1     # AMO API v5 で name/summary/description/privacy_policy を一括 PATCH
+  └── Update-AmoPreviews.ps1     # AMO previews multipart upload (rate limit 重く実用は Dev Hub 手動)
 .github/workflows/      # publish.yml (Chrome Web Store + Firefox AMO の自動公開)
 .amo-metadata.json      # AMO 提出時の categories + version.license (web-ext sign が読む)
 ```
@@ -142,20 +142,27 @@ chrome.storage.local:
 ```powershell
 # 1. firefox-build/ を構築 (key を除き background.scripts を注入した manifest + icons PNG + src/)
 # 出力先は未作成または空のディレクトリを指定する。既存データは削除しない。
-node scripts/stage-extension.js firefox-build firefox
+bun scripts/stage-extension.js firefox-build firefox
 if ($LASTEXITCODE -ne 0) { throw "Firefox staging failed." }
 
-# 2. web-ext sign で AMO submission API 経由 upload
+# 2. 最終アーカイブを検証後、同じSHA-256の実物をHTTPで提出
 $env:WEB_EXT_API_KEY = "user:..."
 $env:WEB_EXT_API_SECRET = "..."
 $releaseVersion = (Get-Content -LiteralPath manifest.json -Raw | ConvertFrom-Json).version
-node scripts/sign-extension.mjs firefox-build web-ext-artifacts $releaseVersion
+$archive = Join-Path (Get-Location) 'firefox-submission.zip'
+if (Test-Path -LiteralPath $archive) { throw '提出物を上書きしません' }
+Compress-Archive -Path 'firefox-build/*' -DestinationPath $archive
+bun scripts/verify-extension-package.js $archive firefox $releaseVersion
+if ($LASTEXITCODE -ne 0) { throw 'XPI verification failed' }
+$addonId = (Get-Content manifest.json -Raw | ConvertFrom-Json).browser_specific_settings.gecko.id
+$sha256 = (Get-FileHash $archive -Algorithm SHA256).Hash
+pwsh -NoProfile -File scripts/Publish-Amo.ps1 -Archive $archive -Metadata .amo-metadata.json -AddonId $addonId -ExpectedVersion $releaseVersion -ExpectedSha256 $sha256
 ```
 
 - `.amo-metadata.json` の `license` は **`version.license` (nested)** で渡す (top-level だと "This field, or custom_license, is required for listed versions." エラー)
-- `web-ext sign` が `Approval: timeout exceeded` と表示しても submission は受理済 (エラーメッセージに含まれる `/versions/<id>` URL がそれ)
+- 受付応答を確認できない通信断・不正応答・重複は停止する。人手レビューの承認は待たない。
 
-### AMO API v5 でリスティング情報を反映 (`scripts/amo-metadata-update.js`)
+### AMO API v5 でリスティング情報を反映 (`scripts/Update-AmoListing.ps1`)
 
 JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Authorization: JWT <token>` を付けて API v5 を叩くと、 name / summary / description / homepage / support_url / privacy_policy をスクリプトから一括反映できる。
 
@@ -164,9 +171,9 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 - `description` は markdown 対応 (`### 見出し` `- リスト` `**強調**` `[リンク](URL)` が `<h3>` `<ul><li>` `<strong>` `<a>` に展開、 外部リンクは Mozilla outgoing proxy 経由に書き換わる)。 summary は plain text のみ
 - locale コードは BCP 47 厳密 (`en` 単独は HTTP 400、 `en-US` を使う)。 `default_locale` を `"ja"` に切り替える PATCH は同じ body に `name: {ja: "..."}` を含めないと "A value in the default locale of \"ja\" is required." エラー
 
-### previews / screenshots (`scripts/amo-previews-upload.js`)
+### previews / screenshots (`scripts/Update-AmoPreviews.ps1`)
 
-`POST /api/v5/addons/addon/{guid}/previews/` (multipart/form-data: `image` + `position`) で screenshots を upload できる、 が **DELETE / POST の user-level rate limit が非常に重い** (1 回叩いただけで 3474 秒 wait、 連投で 53000 秒級まで伸びた事例あり)。 **実運用は AMO Developer Hub からの手動 upload 推奨**。 スクリプトは `--check` モードで既存 previews の `image_url` / `position` 一覧取得のみ実用。
+`POST /api/v5/addons/addon/{guid}/previews/` (multipart/form-data: `image` + `position`) で screenshots を upload できる、 が **DELETE / POST の user-level rate limit が非常に重い** (1 回叩いただけで 3474 秒 wait、 連投で 53000 秒級まで伸びた事例あり)。 **実運用は AMO Developer Hub からの手動 upload 推奨**。 スクリプトは `-Check` モードで既存 previews の `image_url` / `position` 一覧取得のみ実用。
 
 ### HTTP 429 リトライ
 
@@ -174,9 +181,9 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 
 ## CI / Release
 
-`.github/workflows/publish.yml` は Chrome Web Store と Firefox AMO の自動公開ワークフロー。 `release/<X.Y.Z>` push でトリガー。 外部 action は SHA 固定、 `chrome-webstore-upload-cli` は devDependencies に exact pin して `pnpm exec` 経由で実行する (サプライチェーン対策)。 v4 から認証は環境変数のみ (`CLIENT_ID` / `CLIENT_SECRET` / `REFRESH_TOKEN` / `PUBLISHER_ID` / `EXTENSION_ID`) で、 `PUBLISHER_ID` は GitHub Secrets `CWS_PUBLISHER_ID` (正本は secrets.json の `chrome_web_store.publisher_id`) から渡す。 サブコマンド無しで upload + publish 一括 (`--auto-publish` は廃止)。
+`release/<X.Y.Z>` push が公開workflowを起動する。製品ビルド・最終アーカイブ検証後にPowerShell 7のHTTP publisherでCWSとAMOへ提出する。認証secret・publisher/item/GUIDを維持し、GitHub ActionsはSHA固定を維持する。
 
-バージョン更新は `manifest.json` を Edit で書き換え、 `package.json` / `pnpm-lock.yaml` は `pnpm version <X.Y.Z> --no-git-tag-version` で同期。 `/vava` スキルが一括バンプ + release ブランチ作成 + 古いブランチ掃除まで自動化する (PRIMARY_VERSION_FILE = manifest.json、 SECONDARY = package.json/pnpm-lock.yaml)。
+バージョン更新は `/vava` スキルで `manifest.json` と `package.json` を同期し、`bun install --lockfile-only` で `bun.lock` を整合させる（PRIMARY_VERSION_FILE = manifest.json、SECONDARY = package.json/bun.lock）。
 
 Firefox AMO も publish.yml の firefox job が `web-ext sign` (`--approval-timeout=0`) で自動 submission する。 CI が使えない場合のフォールバックは上記「Firefox AMO 公開フロー (手動フォールバック)」。
 
@@ -185,6 +192,31 @@ Firefox AMO も publish.yml の firefox job が `web-ext sign` (`--approval-time
 1. Raindrop.io 開発者コンソール (https://app.raindrop.io/settings/integrations) でアプリ作成
 2. `chrome.identity.getRedirectURL()` の値をリダイレクト URI に登録
 3. `src/background/background.js` の `OAuthConfig` の `CLIENT_ID` / `CLIENT_SECRET` を設定
-4. `pnpm install && pnpm run build` でアイコン・ストア画像生成
+4. `bun install && bun --bun run build` でアイコン・ストア画像生成
 5. **Chrome**: `chrome://extensions` で開発者モード → パッケージ化されていない拡張機能を読み込む
 6. **Firefox 128+**: 先に「Firefox AMO 公開フロー」手順 1 で `firefox-build/` を構築 (`background.scripts` 注入が必要なため、ルートの `manifest.json` 直接読み込みでは background が動かない) → `about:debugging#/runtime/this-firefox` → 「一時的なアドオンを読み込む...」 → `firefox-build/manifest.json` を選択 (再起動で消えるのは仕様)
+
+### CWS 公開のHTTP境界
+
+`publish.yml` はビルド済みZIPを `scripts/Publish-Cws.ps1`（PowerShell 7）へ渡す。既存のOAuth secrets・publisher/item IDを維持し、ZIPをストリーム送信し、upload成功を確認してからpublishする。重複・通信断・不明な応答を公開成功として扱わず、ストア状態を確認してから再開する。公開専用npm CLIは使用しない。変更時はHTTP fixtureで成功・版/ID不一致・upload失敗・publish拒否を確認する。
+
+### AMO 公開のHTTP境界
+
+公開workflowは生成した最終XPIを既存の配布物検証へ通し、SHA-256・GUID・versionを `scripts/Publish-Amo.ps1`（PowerShell 7）へ渡す。旧web-ext sign/承認タイムアウトを成功化する手順に代えて、JWT認証・全ページの非公開listed版検査・upload検証・GUIDに対するPUT提出の受付応答まで確認する。XPIの同一snapshotをhash検証と送信に使い、保存UUIDの再利用・重複・不明な受付結果は停止する。CI成功は審査完了・ストア公開を意味しない。
+
+掲載情報は `pwsh -NoProfile -File scripts/Update-AmoListing.ps1`、画像は `pwsh -NoProfile -File scripts/Update-AmoPreviews.ps1` で更新する。`-DryRun` は外部接続せず入力を表示し、画像の `-Check` は現状取得だけ行う。画像差し替えは全入力ファイルを確認し、新画像3枚すべての受付後に既存画像を削除する。途中拒否は旧画像を維持して停止し、追加済みIDを示して再実行前の確認を促す。文言の正本は `webstore/amo-listing.json` と日本語privacy文書。
+
+CWS公開workflowはrepository固定のconcurrency groupで直列化する。同期uploadの成功・ID・版を確認した場合だけpublishし、非同期uploadはAPI v2でdraft版を要求と結び付けられないため停止する。APIにはuploadとpublishの原子的なCASが無いため、提出中はDashboardや他の手動公開操作を並行しない。
+
+## Bun依存の脆弱性検出
+
+依存の固定復元は `bun run deps` を使う。lock欠落・破損を拒否し、`[run] bun=true` 経由で依存のpostinstallまでBunで実行する。Node.jsがあるPCでも通常の `bun install` を直接使う経路へ戻さない。
+
+日次と手動実行では `bun audit` でlock全体を監査する。ローカルでも同じコマンドで確認できる。BunはDependabotの通常の更新PRには対応するが、脆弱性起点の自動修正PRには未対応なので、監査失敗の調査と依存更新は別途必要。警告を除外して成功扱いにしない。
+
+
+### 依存の暫定セキュリティ修正
+
+minimatch は 11.0.4 以降、multimatch は named import 対応の 8 系へ override する。ESLint 設定の ESM 経路は @eslint/eslintrc@3.3.7 と @eslint/config-array@0.21.2 の最小 import patch で互換性を保つ。web-ext@10.8.0 の FileFilter は Windows で windowsPathsNoEscape を明示し、開発用ファイルやアーカイブの除外を維持する。
+
+CVE-2026-93753（GHSA-gcqx-w48m-w2h4）の deepmerge 4.3.1 は公式修正版が未公開のため、patches/deepmerge@4.3.1.patch で戻り値への書込みを own データ属性にし、__proto__ 経由の prototype 汚染を防ぐ。bun run test:dependencies で web-ext → addons-linter の実解決先の攻撃入力と通常 API を検証する。Bun 標準の patchedDependencies で適用し、公式修正版の採用時に patch の要否を再確認する。バージョンベースの bun audit 警告は残るため、警告を除外したり成功扱いにしない。

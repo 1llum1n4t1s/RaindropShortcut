@@ -12,7 +12,7 @@ test("公開プライバシー文書が実際の保存先と通信先を開示�
   const documents = [
     read("docs/privacy-policy.md"),
     read("webstore/store-listing.txt"),
-    read("scripts/amo-metadata-update.js"),
+    read("webstore/amo-listing.json"),
   ];
 
   for (const document of documents) {

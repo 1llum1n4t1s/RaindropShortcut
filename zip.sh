@@ -9,8 +9,9 @@ rm -f ./raindrop-shortcut.zip
 
 if [ -f scripts/generate-icons.js ]; then
   echo "アイコン生成中..."
-  pnpm install --silent 2>/dev/null || exit $?
-  node scripts/generate-icons.js || exit $?
+  bun run deps --silent 2>/dev/null || exit $?
+  bun --bun run sync:support || exit $?
+  bun scripts/generate-icons.js || exit $?
 fi
 
 if ! command -v zip &> /dev/null; then
@@ -22,7 +23,7 @@ fi
 BUILD_DIR=$(mktemp -d)
 trap 'rm -rf "$BUILD_DIR"' EXIT
 
-node scripts/stage-extension.js "$BUILD_DIR" chrome || exit $?
+bun scripts/stage-extension.js "$BUILD_DIR" chrome || exit $?
 
 (cd "$BUILD_DIR" && zip -r "$OLDPWD/raindrop-shortcut.zip" .)
 

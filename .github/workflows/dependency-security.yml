@@ -1,0 +1,24 @@
+name: Dependency security audit
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Prepare Bun
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
+      # インストール・依存コードの実行なしでlock全体を監査する。
+      # BunはDependabotの脆弱性起点の自動修正PRに未対応。通常の更新PRは維持する。
+      - name: Audit locked dependencies
+        run: bun audit

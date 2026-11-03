@@ -1,0 +1,8 @@
+[install]
+# 公開直後24時間は、明示的に検証済みの例外だけ許可する。
+minimumReleaseAge = 86400
+minimumReleaseAgeExcludes = ["@kagayoi/support-extension@1.0.9"]
+
+[run]
+# CLIのnode shebangもBunで実行する。
+bun = true

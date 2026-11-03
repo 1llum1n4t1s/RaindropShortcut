@@ -4,7 +4,7 @@ const path = require('node:path');
 
 const [output, browser, ...extra] = process.argv.slice(2);
 if (!output || !['chrome', 'firefox'].includes(browser) || extra.length) {
-  console.error('Usage: node scripts/stage-extension.js <output-directory> <chrome|firefox>');
+  console.error('Usage: bun scripts/stage-extension.js <output-directory> <chrome|firefox>');
   process.exit(1);
 }
 

@@ -39,9 +39,12 @@ if ($scriptDir) { Set-Location $scriptDir }
 
 # アイコン生成
 Write-Host "アイコンを生成中..." -ForegroundColor Yellow
-pnpm install --silent 2>$null
+bun run deps --silent 2>$null
 if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
-node scripts/generate-icons.js
+bun --bun run sync:support
+if ($LASTEXITCODE -ne 0) { throw "Support synchronization failed." }
+
+bun scripts/generate-icons.js
 if ($LASTEXITCODE -ne 0) { throw "Icon generation failed." }
 
 # 古いZIPファイルを削除
@@ -60,7 +63,7 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 
 # 共通処理で配布ファイルを配置
 Write-Host "必要なファイルをコピー中..." -ForegroundColor Yellow
-node scripts/stage-extension.js $tempDir chrome
+bun scripts/stage-extension.js $tempDir chrome
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # ZIPファイルを作成

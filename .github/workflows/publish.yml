@@ -8,14 +8,28 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
+
 jobs:
   chrome:
     name: Chrome Web Store 公開
     runs-on: ubuntu-latest
     steps:
-      - name: リポジトリをチェックアウト
-        # actions/checkout v7.0.1 (commit SHA で固定)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Checkout release commit with native git
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" submodule update --init --recursive
 
       - name: バージョンを取得
         id: version
@@ -36,29 +50,25 @@ jobs:
           fi
           echo "✅ ブランチ名と manifest バージョン一致: $expected"
 
-      - name: pnpm セットアップ
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: '12.16.1'
-
-      - name: Node セットアップ
-        # actions/setup-node v7.1.0 (commit SHA で固定)
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: '26.13.0'
-          cache: 'pnpm'
+      - name: Prepare Bun build toolchain
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
 
       - name: 依存インストール
         # lockfile 整合性を強制するため frozen-lockfile のみ。失敗時はフォールバックせず原因修正を強制。
-        run: pnpm install --frozen-lockfile
+        run: bun run deps
+      - name: Validate dependency security patches
+        run: bun run test:dependencies
+      - name: Sync support assets
+        run: bun --bun run sync:support
 
       - name: アイコン生成
-        run: node scripts/generate-icons.js
+        run: bun scripts/generate-icons.js
 
       - name: zip パッケージを作成
         run: |
           BUILD_DIR=$(mktemp -d)
-          node scripts/stage-extension.js "$BUILD_DIR" chrome
+          bun scripts/stage-extension.js "$BUILD_DIR" chrome
           (cd "$BUILD_DIR" && zip -r "$OLDPWD/raindrop-shortcut.zip" .)
           rm -rf "$BUILD_DIR"
           ls -lh raindrop-shortcut.zip
@@ -66,14 +76,11 @@ jobs:
       - name: 提出する Chrome ZIP の版・構成・ハッシュを確認
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
-        run: node scripts/verify-extension-package.js raindrop-shortcut.zip chrome "$RELEASE_VERSION"
+        run: |
+          bun scripts/verify-extension-package.js raindrop-shortcut.zip chrome "$RELEASE_VERSION" > "$RUNNER_TEMP/chrome-verified.json"
+          echo "CWS_VERIFIED_SHA256=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/chrome-verified.json"))["sha256"])')" >> "$GITHUB_ENV"
 
       - name: Chrome Web Store にアップロード & 公開
-        # chrome-webstore-upload-cli v4: 認証情報は CLI フラグ廃止・環境変数のみ
-        # (CLIENT_ID / CLIENT_SECRET / REFRESH_TOKEN / PUBLISHER_ID / EXTENSION_ID)。
-        # v4 は PUBLISHER_ID が新規必須 (CWS Developer Dashboard の Settings で確認)。
-        # サブコマンドなしで upload + publish を一括実行 (--auto-publish は v4 で削除)。
-        # devDep に exact pin した版を pnpm exec で実行 (未検証コードを取得しない方針)。
         env:
           CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
@@ -81,21 +88,25 @@ jobs:
           PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
           EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
         run: |
-          # Secrets 欠落時に CLI の不透明なエラーではなく一行目で fail-fast する
-          if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ] || [ -z "$REFRESH_TOKEN" ] || [ -z "$PUBLISHER_ID" ] || [ -z "$EXTENSION_ID" ]; then
-            echo "::error::CWS_CLIENT_ID / CWS_CLIENT_SECRET / CWS_REFRESH_TOKEN / CWS_PUBLISHER_ID / CWS_EXTENSION_ID の GitHub Secrets が未設定です"
-            exit 1
-          fi
-          pnpm exec chrome-webstore-upload --source raindrop-shortcut.zip
-          echo "🎉 Chrome Web Store への公開リクエストを送信したよ〜"
+          pwsh -NoProfile -File scripts/Test-PublishCws.ps1 -WorkDirectory "$RUNNER_TEMP/cws-publisher-tests"
+          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Archive "raindrop-shortcut.zip" -ExpectedSha256 "$CWS_VERIFIED_SHA256"
 
   firefox:
     name: Firefox AMO 公開
     runs-on: ubuntu-latest
     steps:
-      - name: リポジトリをチェックアウト
-        # actions/checkout v7.0.1 (commit SHA で固定)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Checkout release commit with native git
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" submodule update --init --recursive
 
       - name: バージョンを取得
         id: version
@@ -116,37 +127,40 @@ jobs:
           fi
           echo "✅ ブランチ名と manifest バージョン一致: $expected"
 
-      - name: pnpm セットアップ
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: '12.16.1'
-
-      - name: Node セットアップ
-        # actions/setup-node v7.1.0 (commit SHA で固定)
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: '26.13.0'
-          cache: 'pnpm'
+      - name: Prepare Bun build toolchain
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
 
       - name: 依存インストール
-        run: pnpm install --frozen-lockfile
+        run: bun run deps
+      - name: Validate dependency security patches
+        run: bun run test:dependencies
+      - name: Sync support assets
+        run: bun --bun run sync:support
 
       - name: アイコン生成
-        run: node scripts/generate-icons.js
+        run: bun scripts/generate-icons.js
 
       - name: firefox-build/ を構築
         run: |
-          node scripts/stage-extension.js firefox-build firefox
+          bun scripts/stage-extension.js firefox-build firefox
           ls -la firefox-build
 
       - name: AMO へ submission
-        # exact pin した web-ext の公開 API で、生成 XPI の実物検証後に同じ path を提出する。
-        # approvalTimeout=0: submission 受理直後に終了 (AMO 側の signing 完了は待たない)。
-        # 同 version 重複 push 時は AMO 側で reject される (新バージョンのみ submission 可)。
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          node scripts/sign-extension.mjs firefox-build web-ext-artifacts "$RELEASE_VERSION"
-          echo "🦊 Firefox AMO への submission を送信したよ〜"
+          pwsh -NoProfile -File scripts/Test-PublishAmo.ps1 -WorkDirectory "$RUNNER_TEMP/amo-publisher-tests"
+          test ! -e firefox-build/.amo-upload-uuid
+          mkdir -p web-ext-artifacts
+          ARCHIVE="$GITHUB_WORKSPACE/web-ext-artifacts/unsigned-submission.xpi"
+          test ! -e "$ARCHIVE"
+          pwsh -NoProfile -File scripts/Test-FirefoxArchive.ps1 -WorkDirectory "$RUNNER_TEMP/firefox-archive-tests"
+          pwsh -NoProfile -File scripts/New-FirefoxArchive.ps1 -SourceDirectory firefox-build -Archive "$ARCHIVE" > web-ext-artifacts/build-receipt.json
+          VERSION=$(python3 -c 'import json; print(json.load(open("firefox-build/manifest.json"))["version"])')
+          ADDON_ID=$(python3 -c 'import json; m=json.load(open("firefox-build/manifest.json")); print(m.get("browser_specific_settings",m.get("applications",{}))["gecko"]["id"])')
+          bun scripts/verify-extension-package.js "$ARCHIVE" firefox "$VERSION" > web-ext-artifacts/verified.json
+          SHA256=$(python3 -c 'import json; print(json.load(open("web-ext-artifacts/verified.json"))["sha256"])')
+          pwsh -NoProfile -File scripts/Publish-Amo.ps1 -Archive "$ARCHIVE" -Metadata .amo-metadata.json -AddonId "$ADDON_ID" -ExpectedVersion "$VERSION" -ExpectedSha256 "$SHA256"

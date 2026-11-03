@@ -108,7 +108,7 @@ module.exports = { verifyExtensionPackage };
 if (require.main === module) {
   const [archivePath, browser, expectedVersion, ...extra] = process.argv.slice(2);
   if (!archivePath || !browser || !expectedVersion || extra.length) {
-    console.error("Usage: node scripts/verify-extension-package.js <archive> <chrome|firefox> <release-version>");
+    console.error("Usage: bun scripts/verify-extension-package.js <archive> <chrome|firefox> <release-version>");
     process.exitCode = 1;
   } else {
     verifyExtensionPackage(archivePath, browser, expectedVersion).catch(error => {

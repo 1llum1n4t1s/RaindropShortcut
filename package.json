@@ -4,16 +4,16 @@
   "type": "commonjs",
   "description": "Chrome extension to quickly access Raindrop.io bookmarks",
   "scripts": {
-    "sync:support": "node --preserve-symlinks-main ./node_modules/@kagayoi/support-extension/bin/kagayoi-support-sync.mjs",
-    "prebuild": "pnpm sync:support",
-    "test": "node scripts/verify-node-forge.js && node --test",
-    "generate-icons": "node scripts/generate-icons.js",
-    "generate-screenshots": "node webstore/generate-screenshots.js",
-    "build": "pnpm run generate-icons && pnpm run generate-screenshots"
+    "deps": "bun scripts/Install-Dependencies.mjs",
+    "sync:support": "bun --preserve-symlinks-main ./node_modules/@kagayoi/support-extension/bin/kagayoi-support-sync.mjs",
+    "test": "bun scripts/verify-node-forge.js && bun test",
+    "generate-icons": "bun scripts/generate-icons.js",
+    "generate-screenshots": "bun webstore/generate-screenshots.js",
+    "build": "bun --bun run sync:support && bun --bun run generate-icons && bun --bun run generate-screenshots",
+    "test:dependencies": "bun test ./scripts/dependency-security.test.cjs"
   },
   "devDependencies": {
     "@kagayoi/support-extension": "1.0.9",
-    "chrome-webstore-upload-cli": "4.0.2",
     "puppeteer": "^25.16.0",
     "sharp": "^0.35.5",
     "web-ext": "10.8.0"
@@ -24,5 +24,20 @@
     "bookmarks"
   ],
   "author": "ゆろち",
-  "license": "MIT"
+  "license": "MIT",
+  "packageManager": "bun@1.4.4",
+  "trustedDependencies": [
+    "puppeteer",
+    "sharp"
+  ],
+  "overrides": {
+    "minimatch": "^11.0.4",
+    "multimatch": "^8.0.0"
+  },
+  "patchedDependencies": {
+    "@eslint/eslintrc@3.3.7": "patches/@eslint%2Feslintrc@3.3.7.patch",
+    "deepmerge@4.3.1": "patches/deepmerge@4.3.1.patch",
+    "@eslint/config-array@0.21.2": "patches/@eslint%2Fconfig-array@0.21.2.patch",
+    "web-ext@10.8.0": "patches/web-ext@10.8.0.patch"
+  }
 }
