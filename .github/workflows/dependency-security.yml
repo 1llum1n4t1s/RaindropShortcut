@@ -40,7 +40,16 @@ jobs:
       - name: Test automation safeguards without package installation
         env:
           BUN_SECURITY_TEST_ROOT: ${{ runner.temp }}
-        run: bun test ./scripts/Maintain-Security.test.mjs ./scripts/Security-Pull-Request.test.mjs ./scripts/Validate-SecurityMerge.test.mjs
+        shell: bash
+        run: |
+          # fixture の警告を実際の監査の annotation として扱わない。
+          token="$(cat /proc/sys/kernel/random/uuid)"
+          echo "::stop-commands::$token"
+          set +e
+          bun test ./scripts/Maintain-Security.test.mjs ./scripts/Security-Pull-Request.test.mjs ./scripts/Validate-SecurityMerge.test.mjs
+          result=$?
+          echo "::$token::"
+          exit "$result"
       # 候補のライフサイクルは実行しない。生の監査は除外せず記録する。
       - name: Audit and prepare isolated security fixes
         id: audit

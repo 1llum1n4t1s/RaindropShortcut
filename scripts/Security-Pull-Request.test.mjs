@@ -1,4 +1,4 @@
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -8,6 +8,20 @@ import { BRANCH, candidateFiles, validatePush, pushMerge, prepare, merge, report
 const root = process.env.BUN_SECURITY_TEST_ROOT;
 assert.ok(root && resolve(root) === root, 'BUN_SECURITY_TEST_ROOT must name an existing absolute task directory');
 const fixtures = mkdtempSync(join(root, 'github-tests-'));
+// 実際の Actions run の識別子・summary を fixture の API/監査結果へ混ぜない。
+const ambient = { GITHUB_RUN_ID: process.env.GITHUB_RUN_ID, GITHUB_STEP_SUMMARY: process.env.GITHUB_STEP_SUMMARY };
+delete process.env.GITHUB_RUN_ID;
+process.env.GITHUB_STEP_SUMMARY = join(fixtures, 'fixture-step-summary.md');
+after(() => {
+  for (const [name, value] of Object.entries(ambient)) {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  }
+});
+test('GitHub Actions ambient run and summary are isolated from offline fixtures', () => {
+  assert.equal(process.env.GITHUB_RUN_ID, undefined);
+  assert.equal(process.env.GITHUB_STEP_SUMMARY, join(fixtures, 'fixture-step-summary.md'));
+});
 function git(cwd, args, input) {
   const result = spawnSync('git', args, { cwd, input, encoding: 'utf8', env: { ...process.env,
     GIT_AUTHOR_NAME: 'Fixture', GIT_AUTHOR_EMAIL: 'fixture@example.invalid',
