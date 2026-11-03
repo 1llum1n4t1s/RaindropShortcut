@@ -1,24 +1,152 @@
-name: Dependency security audit
+name: Bun security maintenance
 
 on:
   schedule:
     - cron: '17 5 * * *'
   workflow_dispatch:
+
 permissions:
   contents: read
 
+concurrency:
+  group: bun-security-maintenance
+  cancel-in-progress: false
+
 jobs:
-  audit:
+  prepare:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      has_changes: ${{ steps.pr.outputs.has_changes }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+      base_sha: ${{ steps.pr.outputs.base_sha }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      merge_sha: ${{ steps.pr.outputs.merge_sha }}
+      remaining_count: ${{ steps.pr.outputs.remaining_count }}
+      needs_followup: ${{ steps.pr.outputs.needs_followup }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Prepare Bun
+      - name: Prepare native Bun
         shell: pwsh
         run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
-      # インストール・依存コードの実行なしでlock全体を監査する。
-      # BunはDependabotの脆弱性起点の自動修正PRに未対応。通常の更新PRは維持する。
-      - name: Audit locked dependencies
-        run: bun audit
+      - name: Test automation safeguards without package installation
+        env:
+          BUN_SECURITY_TEST_ROOT: ${{ runner.temp }}
+        run: bun test ./scripts/Maintain-Security.test.mjs ./scripts/Security-Pull-Request.test.mjs ./scripts/Validate-SecurityMerge.test.mjs
+      # 候補のライフサイクルは実行しない。生の監査は除外せず記録する。
+      - name: Audit and prepare isolated security fixes
+        id: audit
+        shell: bash
+        run: |
+          set +e
+          bun scripts/Maintain-Security.mjs fix --repo "$GITHUB_WORKSPACE" --temp-root "$RUNNER_TEMP" --output "$RUNNER_TEMP/bun-security.json"
+          result=$?
+          if [ "$result" -ne 0 ] && [ "$result" -ne 2 ]; then exit "$result"; fi
+      - name: Publish audit summary and unresolved notification
+        if: always() && steps.audit.outcome != 'skipped'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bun scripts/Security-Pull-Request.mjs report --report "$RUNNER_TEMP/bun-security.json"
+      - name: Create or refresh security pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bun scripts/Security-Pull-Request.mjs prepare --report "$RUNNER_TEMP/bun-security.json" --checkout "$GITHUB_WORKSPACE"
+
+  validate:
+    needs: prepare
+    if: needs.prepare.outputs.has_changes == 'true'
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: ./.github/workflows/dependency-validation.yml
+    with:
+      mode: bun-security
+      pr: ${{ needs.prepare.outputs.pr_number }}
+      base_sha: ${{ needs.prepare.outputs.base_sha }}
+      head_sha: ${{ needs.prepare.outputs.head_sha }}
+      merge_sha: ${{ needs.prepare.outputs.merge_sha }}
+
+  merge:
+    needs: [prepare, validate]
+    if: needs.prepare.outputs.has_changes == 'true' && needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+      checks: read
+      statuses: read
+      actions: read
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
+      hold_reason: ${{ steps.merge.outputs.hold_reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prepare native Bun
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
+      - name: Merge exactly the tested snapshot
+        id: merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.prepare.outputs.pr_number }}
+          BASE_SHA: ${{ needs.prepare.outputs.base_sha }}
+          HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
+          MERGE_SHA: ${{ needs.prepare.outputs.merge_sha }}
+        run: bun scripts/Security-Pull-Request.mjs merge --pr "$PR" --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --merge-sha "$MERGE_SHA" --validation-success true --temp-root "$RUNNER_TEMP"
+
+  report-failure:
+    needs: [prepare, validate, merge]
+    if: always() && (needs.prepare.result == 'failure' || (needs.prepare.outputs.has_changes == 'true' && (needs.validate.result != 'success' || needs.merge.result != 'success' || needs.merge.outputs.merged != 'true')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prepare native Bun
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
+      - name: Update one actionable notification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.prepare.outputs.pr_number }}
+          DETAILS: "prepare=${{ needs.prepare.result }}, validation=${{ needs.validate.result }}, merge=${{ needs.merge.result }}, merged=${{ needs.merge.outputs.merged }}, reason=${{ needs.merge.outputs.hold_reason }}"
+        run: bun scripts/Security-Pull-Request.mjs report --status validation-failed --details "$DETAILS" --pr "$PR"
+
+  report-success:
+    needs: [prepare, merge]
+    if: needs.merge.outputs.merged == 'true' && needs.prepare.outputs.remaining_count == '0' && needs.prepare.outputs.needs_followup != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Prepare native Bun
+        shell: pwsh
+        run: ./scripts/Initialize-BunBuild.ps1 -VersionFile package.json
+      - name: Resolve the automation notification after confirmed merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bun scripts/Security-Pull-Request.mjs report --status resolved
