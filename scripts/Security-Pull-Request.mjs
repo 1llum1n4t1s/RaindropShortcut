@@ -3,6 +3,7 @@ import { appendFileSync, readFileSync, lstatSync, mkdirSync, mkdtempSync, writeF
 import { resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { mitigations, remainingAdvisories, parseAudit } from './Maintain-Security.mjs';
 
 export const BRANCH = 'automation/bun-security';
 const BOT = 41898282;
@@ -287,17 +288,66 @@ export async function report(api, options) {
   const result = options.report ? JSON.parse(readFileSync(options.report, 'utf8')) : { status: options.status };
   assert(typeof result.status === 'string', 'Report status required');
   const count = raw => Object.values(raw || {}).reduce((total, entries) => total + (Array.isArray(entries) ? entries.length : 0), 0);
+  let main = { known: false, sha: process.env.GITHUB_SHA || null, mitigations: null, remaining: null, raw: null };
+  if (options.report) {
+    try {
+      assert(options.checkout && sha(process.env.GITHUB_SHA), 'Missing trusted checkout');
+      const git = args => {
+        const out = spawnSync('git', args, { cwd: options.checkout, encoding: 'utf8' });
+        assert(out.status === 0, 'Cannot verify checkout');
+        return out.stdout.trim();
+      };
+      assert(git(['rev-parse', 'HEAD']) === process.env.GITHUB_SHA, 'Checkout SHA mismatch');
+      assert(git(['status', '--porcelain', '--untracked-files=all']) === '', 'Checkout has changes');
+      const raw = parseAudit(JSON.stringify(result.rawBefore));
+      const verified = mitigations(options.checkout, raw);
+      const remaining = remainingAdvisories(raw, verified);
+      for (const [key, value] of [['mainMitigations', verified], ['mainRemaining', remaining]]) {
+        if (Object.hasOwn(result, key)) assert(JSON.stringify(result[key]) === JSON.stringify(value), `Invalid ${key}`);
+      }
+      let latest = raw;
+      if (result.result_changed === false && result.status !== 'error') {
+        try { latest = parseAudit(JSON.stringify(result.rawAfter)); }
+        catch { /* 後続監査が不正でも検証済みの初回監査は保持する。 */ }
+      }
+      const latestMitigations = latest === raw ? verified : mitigations(options.checkout, latest);
+      main = { known: true, sha: process.env.GITHUB_SHA, mitigations: latestMitigations, remaining: latest === raw ? remaining : remainingAdvisories(latest, latestMitigations), raw: latest };
+    } catch { /* 検証できない監査は clean と扱わない。 */ }
+  }
+  let afterKnown = false;
+  let afterRaw;
+  if (options.report && result.status !== 'error') {
+    try { afterRaw = parseAudit(JSON.stringify(result.rawAfter)); afterKnown = true; }
+    catch { /* 候補の生監査がなければ初期値を候補結果として扱わない。 */ }
+  }
+  const relationKnown = typeof result.result_changed === 'boolean';
+  let candidateKnown = false;
+  if (afterKnown && relationKnown && Array.isArray(result.remaining) && Array.isArray(result.mitigations)) {
+    if (result.result_changed === false && main.known)
+      candidateKnown = JSON.stringify(result.mitigations) === JSON.stringify(main.mitigations) && JSON.stringify(result.remaining) === JSON.stringify(main.remaining);
+    else if (result.result_changed === true && result.mitigations.length === 0)
+      candidateKnown = JSON.stringify(result.remaining) === JSON.stringify(remainingAdvisories(afterRaw, []));
+  }
+  const candidateRemaining = candidateKnown ? result.remaining : null;
+  const candidateMitigations = candidateKnown ? result.mitigations : null;
+  const errorDetail = result.status === 'error' ? result.error ?? 'unknown' : result.error;
   const audit = {
     status: result.status,
-    rawAuditSucceeded: result.status === 'clean' && !!result.rawAfter && count(result.rawAfter) === 0,
-    mitigatedCount: Array.isArray(result.mitigations) ? result.mitigations.length : null,
-    remainingCount: Array.isArray(result.remaining) ? result.remaining.length : null,
+    error: errorDetail,
+    mainKnown: main.known, mainSha: main.sha, mainRemainingCount: main.remaining?.length ?? null,
+    candidateKnown, candidateRemainingCount: candidateRemaining?.length ?? null,
+    rawAuditSucceeded: afterKnown && result.status === 'clean' && count(result.rawAfter) === 0,
+    mitigatedCount: candidateMitigations?.length ?? null,
+    remainingCount: candidateRemaining?.length ?? null,
     rawBefore: result.rawBefore, rawAfter: result.rawAfter,
-    mitigations: result.mitigations, remaining: result.remaining, error: result.error,
+    mitigations: result.mitigations, remaining: result.remaining,
     needs_followup: result.needs_followup, upstreamFixes: result.upstreamFixes,
     nativeFix: result.nativeFix && { exitCode: result.nativeFix.exitCode, stderr: result.nativeFix.stderr },
+    scope: { rawBefore: main.known ? 'reported base snapshot; checkout identity verified' : 'reported, base association unverified', rawAfter: !afterKnown ? 'unknown' : !relationKnown ? 'reported snapshot; base/candidate relation unknown' : result.result_changed === false ? (main.known ? 'same base snapshot (initial or re-audit)' : 'reported snapshot; base association unverified') : 'unmerged candidate', rawAuditSucceeded: 'valid rawAfter only', mitigations: candidateKnown ? 'rawAfter verified' : 'unverified legacy field; may contain initial base values', remaining: candidateKnown ? 'rawAfter verified' : 'unverified legacy field; may contain initial base values' },
+    candidateMitigations, candidateRemaining,
+    mainMitigations: main.mitigations, mainRemaining: main.remaining,
   };
-  if (count(result.rawAfter || result.rawBefore) > 0)
+  if (count(result.rawBefore) > 0 || count(result.rawAfter) > 0)
     process.stdout.write('::warning::Raw bun audit still reports advisories; verified mitigations are separate.\n');
   const truncateUtf8 = (value, limit) => {
     let excerpt = '', bytes = 0;
@@ -325,14 +375,15 @@ export async function report(api, options) {
     }
   }
   const repo = await metadata(api);
-  const diagnostics = JSON.stringify({ remaining: result.remaining, error: result.error,
+  const diagnostics = JSON.stringify({ status: result.status, error: errorDetail, mainKnown: main.known, mainSha: main.sha, mainRemainingCount: main.remaining?.length ?? null, candidateKnown, candidateRemainingCount: candidateRemaining?.length ?? null, scope: audit.scope, mainMitigations: main.mitigations, mainRemaining: main.remaining, candidateMitigations, candidateRemaining, rawBefore: result.rawBefore, rawAfter: result.rawAfter, remaining: result.remaining,
     needs_followup: result.needs_followup, upstreamFixes: result.upstreamFixes,
     nativeFix: result.nativeFix && { exitCode: result.nativeFix.exitCode, stderr: result.nativeFix.stderr } }, null, 2);
   const diagnostic = truncateUtf8(diagnostics, 30000);
   const omitted = diagnostic.truncated ? '\nIssue の診断情報は一部を省略しました。' : '';
   const summaryNotice = summaryComplete ? '完全版は workflow summary を参照してください。' : 'workflow summary も一部または全部が省略されています。';
   const prLink = /^\d+$/.test(options.pr || '') ? `\nPR: https://github.com/${api.repository}/pull/${options.pr}\n` : '';
-  const auditBody = `${marker}\nBun security automation: ${String(result.status)}\n\nRemaining advisories: ${Array.isArray(result.remaining) ? result.remaining.length : 'see workflow summary'}\n\n${String(options.details || '')}${prLink}\n\nWorkflow: https://github.com/${api.repository}/actions/runs/${process.env.GITHUB_RUN_ID || ''}\n\n\`\`\`json\n${diagnostic.excerpt}\n\`\`\`${omitted}\n${summaryNotice}`;
+  const afterLabel = !afterKnown ? 'candidate or subsequent audit' : !relationKnown ? 'reported snapshot with unknown base/candidate relation' : result.result_changed === false ? (main.known ? 'same base snapshot (initial or re-audit)' : 'reported snapshot with unverified base') : 'unmerged candidate or unavailable';
+  const auditBody = `${marker}\nBun security automation: ${String(result.status)}\n\nBase (${main.sha || 'unknown'}): ${main.known ? `${main.remaining.length} remaining` : 'unknown'}; ${afterLabel} remaining: ${relationKnown && candidateRemaining ? candidateRemaining.length : 'unknown'}\n\n${String(options.details || '')}${prLink}\n\nWorkflow: https://github.com/${api.repository}/actions/runs/${process.env.GITHUB_RUN_ID || ''}\n\n\`\`\`json\n${diagnostic.excerpt}\n\`\`\`${omitted}\n${summaryNotice}`;
   if (!repo.has_issues) return { issue_reporting: 'disabled' };
   let existing;
   for (let page = 1; page <= 10; page++) {
@@ -355,12 +406,12 @@ export async function report(api, options) {
   const stage = `\n\n${stageMarker}\n${stageHeading}\nBun security automation: ${String(result.status)}\n\n${String(options.details || '')}${prLink}\n\nWorkflow: https://github.com/${api.repository}/actions/runs/${process.env.GITHUB_RUN_ID || ''}`;
   const body = options.report ? auditBody + priorStage : (priorAudit || marker) + stage;
   const checkBody = () => assert(Buffer.byteLength(body, 'utf8') <= 65536, 'Notification exceeds GitHub issue body limit; preserving existing issue');
-  const problem = result.needs_followup === true || result.upstreamFixes?.length > 0 || result.remaining?.length || ['unfixable', 'blocked', 'error', 'validation-failed', 'prepare-failed', 'merge-failed'].includes(result.status);
+  const problem = (options.report && (!main.known || main.remaining.length > 0 || !relationKnown || (result.result_changed === true && (!afterKnown || (!candidateKnown && count(afterRaw) > 0))))) || result.needs_followup === true || result.upstreamFixes?.length > 0 || candidateRemaining?.length || ['unfixable', 'blocked', 'error', 'validation-failed', 'prepare-failed', 'merge-failed'].includes(result.status);
   if (!problem) {
     // 監査の clean/mitigated は既存 PR の CI 成功を証明しない。
     let resolved = result.status === 'resolved';
     if (existing && !resolved && ['clean', 'mitigated'].includes(result.status) &&
-        result.remaining?.length === 0 && result.result_changed === false) {
+        main.known && main.remaining.length === 0 && result.result_changed === false) {
       const open = await api.request(`/pulls?state=open&head=${encodeURIComponent(`${api.repository.split('/')[0]}:${BRANCH}`)}&per_page=100`);
       assert(Array.isArray(open), 'Cannot verify pending security PRs');
       resolved = open.length === 0;

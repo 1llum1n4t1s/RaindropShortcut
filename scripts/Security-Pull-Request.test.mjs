@@ -154,40 +154,148 @@ test('prepare creates only allowed Git database tree and reuses identical owned 
     await assert.rejects(prepare(api, { report: reportFile, checkout: value.remote }), /closed PR/);
   } finally { if (old === undefined) delete process.env.GITHUB_SHA; else process.env.GITHUB_SHA = old; }
 });
-test('approved mitigated advisory creates no issue; failure reuses owned marker issue', async () => {
+test('approved mitigated advisory creates no issue; failure reuses owned marker issue', async t => {
+  const checkout = join(fixtures, 'trusted-report-checkout');
+  mkdirSync(checkout);
+  git(checkout, ['init', '--quiet']);
+  const manifest = git(checkout, ['hash-object', '-w', '--stdin'], '{}');
+  const lock = git(checkout, ['hash-object', '-w', '--stdin'], JSON.stringify({ workspaces: { '': {} }, packages: {} }));
+  const tree = git(checkout, ['mktree'], `100644 blob ${lock}\tbun.lock\n100644 blob ${manifest}\tpackage.json\n`);
+  const commit = git(checkout, ['commit-tree', tree], 'fixture');
+  git(checkout, ['update-ref', 'HEAD', commit]);
+  git(checkout, ['read-tree', '--reset', '-u', 'HEAD']);
+  const oldSha = process.env.GITHUB_SHA;
+  process.env.GITHUB_SHA = git(checkout, ['rev-parse', 'HEAD']);
+  t.after(() => { if (oldSha === undefined) delete process.env.GITHUB_SHA; else process.env.GITHUB_SHA = oldSha; });
   const file = join(fixtures, 'report.json');
-  writeFileSync(file, JSON.stringify({ status: 'mitigated', remaining: [], rawAfter: { deepmerge: [{}] } }));
+  writeFileSync(file, JSON.stringify({ status: 'mitigated', remaining: [], mitigations: [], rawBefore: {}, rawAfter: {}, result_changed: false }));
   const writes = [];
   const api = { repository: 'owner/repo', async request(path, method = 'GET', payload) {
     if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
     if (path.startsWith('/issues?')) return [];
     writes.push([path, method, payload]); return { number: 4 };
   } };
-  assert.deepEqual(await report(api, { report: file }), { issue_reporting: 'clear' });
+  assert.deepEqual(await report(api, { report: file, checkout }), { issue_reporting: 'clear' });
   assert.equal(writes.length, 0);
+  const advisory = { url: 'https://example.invalid/GHSA-base', severity: 'high' };
+  const baseReport = { status: 'clean', result_changed: true, rawBefore: { vulnerable: [advisory] }, rawAfter: {}, remaining: [], mitigations: [], mainMitigations: [], mainRemaining: [{ package: 'vulnerable', ...advisory }] };
+  writeFileSync(file, JSON.stringify(baseReport));
+  await report(api, { report: file, checkout });
+  assert.match(writes.at(-1)[2].body, /Base .*: 1 remaining; unmerged candidate or unavailable remaining: 0/);
+  assert.match(writes.at(-1)[2].body, /GHSA-base/);
+  writes.length = 0;
+  for (const invalid of [
+    { ...baseReport, rawBefore: null },
+    { ...baseReport, rawBefore: { vulnerable: [{}] } },
+    { ...baseReport, mainRemaining: [] },
+    { ...baseReport, status: 'error', rawBefore: null, rawAfter: {} },
+  ]) {
+    writeFileSync(file, JSON.stringify(invalid));
+    await report(api, { report: file, checkout });
+    assert.match(writes.at(-1)[2].body, /Base .*: unknown/);
+  }
+  process.env.GITHUB_SHA = 'f'.repeat(40);
+  writeFileSync(file, JSON.stringify(baseReport));
+  await report(api, { report: file, checkout });
+  assert.match(writes.at(-1)[2].body, /Base .*: unknown/);
+  assert.match(writes.at(-1)[2].body, /reported, base association unverified/);
+  process.env.GITHUB_SHA = git(checkout, ['rev-parse', 'HEAD']);
+  const { mainRemaining, mainMitigations, ...legacy } = baseReport;
+  writeFileSync(file, JSON.stringify(legacy));
+  await report(api, { report: file, checkout });
+  assert.match(writes.at(-1)[2].body, /Base .*: 1 remaining/);
+  for (const changed of [undefined, 'false', null]) {
+    writeFileSync(file, JSON.stringify({ ...baseReport, result_changed: changed, rawBefore: {}, mainRemaining: [], rawAfter: {}, remaining: [] }));
+    await report(api, { report: file, checkout });
+    assert.match(writes.at(-1)[2].body, /unknown base\/candidate relation/);
+    assert.match(writes.at(-1)[2].body, /"candidateKnown": false/);
+  }
+  const candidateReport = { status: 'remaining', result_changed: true, rawBefore: {}, mainMitigations: [], mainRemaining: [], rawAfter: { vulnerable: [advisory] }, remaining: [{ package: 'vulnerable', ...advisory }], mitigations: [] };
+  for (const rawAfter of [undefined, null, { vulnerable: [{}] }]) {
+    const beforeWrites = writes.length;
+    writeFileSync(file, JSON.stringify({ ...candidateReport, status: 'clean', rawAfter, remaining: [] }));
+    await report(api, { report: file, checkout });
+    assert.equal(writes.length, beforeWrites + 1, 'Invalid candidate audit must create a notification');
+    assert.match(writes.at(-1)[2].body, /"candidateKnown": false/);
+    assert.match(writes.at(-1)[2].body, /candidate or subsequent audit remaining: unknown/);
+  }
+  for (const incomplete of [
+    { ...candidateReport, remaining: undefined },
+    { ...candidateReport, remaining: [], mitigations: undefined },
+    { ...candidateReport, remaining: [] },
+    { ...candidateReport, mitigations: [{ package: 'vulnerable', advisory: advisory.url }], remaining: [] },
+    { ...candidateReport, mitigations: {} },
+  ]) {
+    writeFileSync(file, JSON.stringify(incomplete));
+    await report(api, { report: file, checkout });
+    const body = writes.at(-1)[2].body;
+    assert.match(body, /"candidateKnown": false/);
+    assert.match(body, /"candidateRemaining": null/);
+    assert.match(body, /"candidateMitigations": null/);
+  }
+  writeFileSync(file, JSON.stringify(candidateReport));
+  await report(api, { report: file, checkout });
+  assert.match(writes.at(-1)[2].body, /"candidateKnown": true/);
+  writeFileSync(file, JSON.stringify({ status: 'clean', result_changed: false, rawBefore: {}, rawAfter: {} }));
+  assert.deepEqual(await report(api, { report: file, checkout }), { issue_reporting: 'clear' });
+  const closes = [];
+  const resolvedApi = { repository: 'owner/repo', async request(path, method = 'GET', payload) {
+    if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
+    if (path.startsWith('/issues?')) return [{ number: 4, user: { id: 41898282 }, body: '<!-- bun-security-automation -->\nold' }];
+    if (path.startsWith('/pulls?')) return [];
+    closes.push(payload); return { number: 4 };
+  } };
+  assert.deepEqual(await report(resolvedApi, { report: file, checkout }), { issue_reporting: 'clear' });
+  assert.deepEqual(closes, [{ state: 'closed' }]);
+  writeFileSync(file, JSON.stringify({ ...baseReport, status: 'remaining', result_changed: false, rawAfter: baseReport.rawBefore, remaining: baseReport.mainRemaining }));
+  await report(api, { report: file, checkout });
+  assert.match(writes.at(-1)[2].body, /same base snapshot \(initial or re-audit\)/);
+  writeFileSync(file, JSON.stringify({ ...baseReport, status: 'error', result_changed: false }));
+  await report(api, { report: file, checkout });
+  assert.match(writes.at(-1)[2].body, /Base .*: 1 remaining/);
+  for (const [stage, rawAfter] of [['probe', baseReport.rawBefore], ['fix', null], ['validation', {}]]) {
+    writeFileSync(file, JSON.stringify({ ...baseReport, status: 'error', rawAfter, remaining: baseReport.mainRemaining, mitigations: [{ package: 'deepmerge' }], error: `${stage} failed` }));
+    await report(api, { report: file, checkout });
+    const body = writes.at(-1)[2].body;
+    assert.match(body, /Base .*: 1 remaining; candidate or subsequent audit remaining: unknown/);
+    assert.match(body, /"candidateKnown": false/);
+    assert.match(body, /"candidateRemaining": null/);
+    assert.match(body, /"candidateMitigations": null/);
+    assert.match(body, new RegExp(`${stage} failed`));
+  }
+  for (const rawAfter of [null, { vulnerable: [{}] }]) {
+    writeFileSync(file, JSON.stringify({ ...baseReport, result_changed: false, rawAfter, remaining: baseReport.mainRemaining }));
+    await report(api, { report: file, checkout });
+    assert.match(writes.at(-1)[2].body, /Base .*: 1 remaining; candidate or subsequent audit remaining: unknown/);
+  }
+  writeFileSync(file, JSON.stringify({ ...baseReport, result_changed: false }));
+  assert.deepEqual(await report(api, { report: file, checkout }), { issue_reporting: 'clear' });
+  writes.length = 0;
+  writeFileSync(file, JSON.stringify({ status: 'mitigated', remaining: [], mitigations: [], rawBefore: {}, rawAfter: {}, result_changed: false }));
   api.request = async (path, method = 'GET', payload) => {
     if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
     if (path.startsWith('/issues?')) return [{ number: 4, user: { id: 41898282 }, body: '<!-- bun-security-automation -->\nold' }];
+    if (path.startsWith('/pulls?')) return [{ number: 7 }];
     writes.push([path, method, payload]); return { number: 4 };
   };
   assert.deepEqual(await report(api, { status: 'validation-failed', details: 'CI failed' }), { issue_number: 4 });
   assert.equal(writes[0][0], '/issues/4');
   assert.equal(writes[0][1], 'PATCH');
   writes.length = 0;
-  assert.deepEqual(await report(api, { report: file }), { issue_reporting: 'unchanged' });
+  assert.deepEqual(await report(api, { report: file, checkout }), { issue_reporting: 'unchanged' });
   assert.equal(writes.length, 1, 'Pre-validation audit refreshes the issue without closing it');
   assert.equal(writes[0][2].state, undefined);
   writes.length = 0;
   const summary = join(fixtures, 'summary.md');
   const oldSummary = process.env.GITHUB_STEP_SUMMARY;
   process.env.GITHUB_STEP_SUMMARY = summary;
-  try { await report(api, { report: file }); }
+  try { await report(api, { report: file, checkout }); }
   finally {
     if (oldSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY;
     else process.env.GITHUB_STEP_SUMMARY = oldSummary;
   }
   assert.match(readFileSync(summary, 'utf8'), /"rawAuditSucceeded": false/);
-  assert.match(readFileSync(summary, 'utf8'), /"deepmerge"/);
+  assert.match(readFileSync(summary, 'utf8'), /"mainKnown": true/);
   assert.deepEqual(await report(api, { status: 'resolved' }), { issue_reporting: 'clear' });
   assert.deepEqual(writes.at(-1), ['/issues/4', 'PATCH', { state: 'closed' }]);
   writes.length = 0;
@@ -268,6 +376,29 @@ test('large multibyte audit is truncated safely when creating an issue', async (
   assert.match(body, /障害😀/);
   assert.match(body, /Issue の診断情報は一部を省略しました。/);
   assert.doesNotMatch(body, /\uFFFD/);
+});
+test('large raw audit does not hide the short error or scope in issue and summary', async () => {
+  const file = join(fixtures, 'large-raw-error.json');
+  const summary = join(fixtures, 'large-raw-error-summary.md');
+  writeFileSync(file, JSON.stringify({ status: 'error', error: 'FIX-FAILED', rawBefore: { a: [{ url: 'https://example.invalid/advisory', severity: 'high', text: '障'.repeat(400000) }] }, rawAfter: null, remaining: [] }));
+  let body;
+  const api = { repository: 'owner/repo', async request(path, method = 'GET', payload) {
+    if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
+    if (path.startsWith('/issues?')) return [];
+    assert.equal(method, 'POST'); body = payload.body; return { number: 4 };
+  } };
+  const oldSummary = process.env.GITHUB_STEP_SUMMARY;
+  process.env.GITHUB_STEP_SUMMARY = summary;
+  try { await report(api, { report: file }); }
+  finally { if (oldSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY; else process.env.GITHUB_STEP_SUMMARY = oldSummary; }
+  const text = readFileSync(summary, 'utf8');
+  for (const output of [body, text]) {
+    assert.match(output, /FIX-FAILED/);
+    assert.match(output, /"mainKnown": false/);
+    assert.match(output, /"candidateKnown": false/);
+  }
+  assert.ok(Buffer.byteLength(text, 'utf8') <= 900000);
+  assert.match(text, /一部を省略しました。/);
 });
 test('truncated native fix stderr remains complete in the workflow summary', async () => {
   const file = join(fixtures, 'large-native-fix.json');

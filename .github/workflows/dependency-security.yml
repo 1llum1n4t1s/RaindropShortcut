@@ -63,7 +63,7 @@ jobs:
         if: always() && steps.audit.outcome != 'skipped'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: bun scripts/Security-Pull-Request.mjs report --report "$RUNNER_TEMP/bun-security.json"
+        run: bun scripts/Security-Pull-Request.mjs report --report "$RUNNER_TEMP/bun-security.json" --checkout "$GITHUB_WORKSPACE"
       - name: Create or refresh security pull request
         id: pr
         env:

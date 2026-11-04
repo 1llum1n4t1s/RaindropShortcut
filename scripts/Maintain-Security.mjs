@@ -118,7 +118,11 @@ export function mitigations(root, audit, lock = lockAt(root)) {
   return (audit.deepmerge ?? []).filter(item => item.url === advisoryURL && item.vulnerable_versions === '>=4.2.0 <=4.3.1').map(item => ({ package: 'deepmerge', advisory: item.url, version: '4.3.1', patch, sha256: DEEPMERGE_PATCH_SHA256 }));
 }
 export function remainingAdvisories(audit, verified) {
-  return Object.entries(audit).flatMap(([name, entries]) => entries.filter(item => !verified.some(m => m.package === name && m.advisory === item.url)).map(item => ({ package: name, ...item })));
+  return Object.entries(audit).flatMap(([name, entries]) => entries.filter(item => !verified.some(m => m.package === name && m.advisory === item.url && name === 'deepmerge' && item.vulnerable_versions === '>=4.2.0 <=4.3.1')).map(item => ({ package: name, ...item })));
+}
+export function safeRemediationIgnores(audit, verified) {
+  const untreated = remainingAdvisories(audit, verified);
+  return [...new Set(verified.map(item => item.advisory.split('/').pop()))].filter(id => !untreated.some(item => item.url?.split('/').pop() === id));
 }
 export function parseNativeFix(stdout, { allowUnsafe = false } = {}) {
   for (const line of String(stdout).trim().split(/\r?\n/).reverse()) {
@@ -138,7 +142,7 @@ export function upstreamMitigationFixes(plan, verified) {
   return [...plan.fixes, ...plan.blocked].filter(fix => verified.some(item => item.package === fix.name && item.version === fix.from) && typeof fix.to === 'string' && !fix.downgrade && Bun.semver.order(fix.to, fix.from) > 0).map(fix => ({ ...fix, advisory: verified.find(item => item.package === fix.name).advisory }));
 }
 export function validateReduction(before, after, changed) {
-  if (after.some(item => !before.some(old => old.package === item.package && old.url === item.url))) throw new Error('候補で新しい未対策の脆弱性が発生しました');
+  if (after.some(item => !before.some(old => old.package === item.package && old.url === item.url && old.vulnerable_versions === item.vulnerable_versions))) throw new Error('候補で新しい未対策の脆弱性が発生しました');
   if (changed && after.length >= before.length) throw new Error('未対策の脆弱性が減らない候補変更を拒否しました');
 }
 function run(root, args, tempRoot) {
@@ -189,7 +193,8 @@ export async function maintain({ repo, tempRoot, mode = 'inspect', apply = false
   copy(candidateRoot, before.bytes);
   const rawBefore = audit(candidateRoot, tempRoot);
   const initialMitigations = mitigations(candidateRoot, rawBefore, before.lock);
-  const report = { schemaVersion: 1, repo, candidateRoot, status: 'unchanged', result_changed: false, changedFiles: [], rawBefore, rawAfter: rawBefore, mitigations: initialMitigations, remaining: remainingAdvisories(rawBefore, initialMitigations), applied: false, upstreamFixes: [], needs_followup: false };
+  const mainRemaining = remainingAdvisories(rawBefore, initialMitigations);
+  const report = { schemaVersion: 1, repo, candidateRoot, status: 'unchanged', result_changed: false, changedFiles: [], rawBefore, rawAfter: rawBefore, mainMitigations: initialMitigations, mainRemaining, mitigations: initialMitigations, remaining: mainRemaining, applied: false, upstreamFixes: [], needs_followup: false };
   try {
   if (initialMitigations.length) {
     const probe = run(candidateRoot, ['audit', 'fix', '--latest', '--json', '--dry-run', '--ignore-scripts', '--lockfile-only'], tempRoot);
@@ -205,7 +210,7 @@ export async function maintain({ repo, tempRoot, mode = 'inspect', apply = false
   }
   if (mode !== 'fix') throw new Error(`不明なmode: ${mode}`);
   // 生の監査は常に除外なし。完全一致で検証済みの対策だけ修正計画から外す。
-  const remediationIgnores = [...new Set(initialMitigations.map(item => item.advisory.split('/').pop()))];
+  const remediationIgnores = safeRemediationIgnores(rawBefore, initialMitigations);
   const fixArgs = ['audit', 'fix', '--latest', '--ignore-scripts', '--lockfile-only', '--json', ...remediationIgnores.flatMap(id => ['--ignore', id])];
   report.remediationIgnores = remediationIgnores;
   const planned = run(candidateRoot, [...fixArgs, '--dry-run'], tempRoot);

@@ -1,9 +1,20 @@
 import { test, expect } from 'bun:test';
 import { mkdirSync, writeFileSync, existsSync, readFileSync, copyFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseAudit, parseNativeFix, upstreamMitigationFixes, validateReduction, validateManifest, validateProtectedFiles, validateNoDowngrades, validateReleaseAge, maintain, safePath } from './Maintain-Security.mjs';
+import { parseAudit, parseNativeFix, upstreamMitigationFixes, validateReduction, validateManifest, validateProtectedFiles, validateNoDowngrades, validateReleaseAge, maintain, safePath, remainingAdvisories, safeRemediationIgnores } from './Maintain-Security.mjs';
 
 const lock = versions => ({ workspaces: { '': {} }, packages: Object.fromEntries(versions.map(([slot, name, version]) => [slot, [`${name}@${version}`, '', {}, 'sha512-fixture']])) });
+test('同じ advisory でも未検証の範囲は残し、ID 全体を ignore しない', () => {
+  const url = 'https://github.com/advisories/GHSA-gcqx-w48m-w2h4';
+  const verified = [{ package: 'deepmerge', advisory: url }];
+  const patched = { url, vulnerable_versions: '>=4.2.0 <=4.3.1' };
+  const other = { url, vulnerable_versions: '<5.0.0' };
+  expect(remainingAdvisories({ deepmerge: [patched, other] }, verified)).toEqual([{ package: 'deepmerge', ...other }]);
+  expect(safeRemediationIgnores({ deepmerge: [patched, other] }, verified)).toEqual([]);
+  expect(safeRemediationIgnores({ deepmerge: [patched] }, verified)).toEqual(['GHSA-gcqx-w48m-w2h4']);
+  const second = { url: 'https://github.com/advisories/GHSA-other', vulnerable_versions: '>=4.2.0 <=4.3.1' };
+  expect(safeRemediationIgnores({ deepmerge: [patched, other, second] }, [...verified, { package: 'deepmerge', advisory: second.url }])).toEqual(['GHSA-other']);
+});
 test('監査JSONの前置きを許容し、欠落や不正データを成功扱いにしない', () => {
   expect(parseAudit('Bun audit\n{}\n')).toEqual({});
   expect(() => parseAudit('request failed')).toThrow();
@@ -30,6 +41,11 @@ test('native計画のJSON、downgrade、公開待機期間と厳密な監査削�
   expect(() => validateReduction([advisory], [advisory], true)).toThrow();
   expect(() => validateReduction([advisory], [{ package: 'y', url: 'GHSA-y' }], true)).toThrow();
   validateReduction([advisory], [], true);
+  const originalRange = { ...advisory, vulnerable_versions: '<1.0.0' };
+  const newRange = { ...advisory, vulnerable_versions: '<2.0.0' };
+  const another = { package: 'y', url: 'GHSA-y', vulnerable_versions: '<1.0.0' };
+  expect(() => validateReduction([originalRange, another], [newRange], true)).toThrow();
+  validateReduction([originalRange, another], [originalRange], true);
 });
 test('対策済み依存の公式新版だけを監視し、downgradeを毎日通知しない', () => {
   const verified = [{ package: 'deepmerge', version: '4.3.1', advisory: 'GHSA-reviewed' }];
