@@ -86,7 +86,8 @@ jobs:
 
   merge:
     needs: [prepare, validate]
-    if: needs.prepare.outputs.has_changes == 'true' && needs.validate.result == 'success'
+    # 安全な自動マージ方式が完成するまで、明示的に有効化されない限り保留する。
+    if: needs.prepare.outputs.has_changes == 'true' && needs.validate.result == 'success' && vars.BUN_SECURITY_AUTO_MERGE == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -136,8 +137,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ needs.prepare.outputs.pr_number }}
-          DETAILS: "prepare=${{ needs.prepare.result }}, validation=${{ needs.validate.result }}, merge=${{ needs.merge.result }}, merged=${{ needs.merge.outputs.merged }}, reason=${{ needs.merge.outputs.hold_reason }}"
-        run: bun scripts/Security-Pull-Request.mjs report --status validation-failed --details "$DETAILS" --pr "$PR"
+          STATUS: ${{ needs.prepare.result == 'failure' && 'prepare-failed' || needs.validate.result != 'success' && 'validation-failed' || needs.merge.result != 'success' && (needs.merge.result != 'skipped' || vars.BUN_SECURITY_AUTO_MERGE == 'true') && 'merge-failed' || 'blocked' }}
+          DETAILS: "prepare=${{ needs.prepare.result }}, validation=${{ needs.validate.result }}, merge=${{ needs.merge.result }}, merged=${{ needs.merge.outputs.merged }}, reason=${{ needs.validate.result == 'success' && vars.BUN_SECURITY_AUTO_MERGE != 'true' && 'Automatic merge temporarily paused' || needs.merge.outputs.hold_reason }}"
+        run: bun scripts/Security-Pull-Request.mjs report --status "$STATUS" --details "$DETAILS" --pr "$PR"
 
   report-success:
     needs: [prepare, merge]

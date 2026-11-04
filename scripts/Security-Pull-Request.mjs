@@ -1,5 +1,5 @@
 // 権限のあるジョブ専用。依存パッケージや候補内のコードを実行しない。
-import { appendFileSync, readFileSync, lstatSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, lstatSync, mkdirSync, mkdtempSync, writeFileSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -295,17 +295,44 @@ export async function report(api, options) {
     rawBefore: result.rawBefore, rawAfter: result.rawAfter,
     mitigations: result.mitigations, remaining: result.remaining, error: result.error,
     needs_followup: result.needs_followup, upstreamFixes: result.upstreamFixes,
+    nativeFix: result.nativeFix && { exitCode: result.nativeFix.exitCode, stderr: result.nativeFix.stderr },
   };
   if (count(result.rawAfter || result.rawBefore) > 0)
     process.stdout.write('::warning::Raw bun audit still reports advisories; verified mitigations are separate.\n');
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-    `\n### Bun security audit\n\nKnown mitigations do not turn a failing raw audit into a successful raw audit.\n\n\`\`\`json\n${JSON.stringify(audit, null, 2)}\n\`\`\`\n`);
+  const truncateUtf8 = (value, limit) => {
+    let excerpt = '', bytes = 0;
+    for (const character of value) {
+      const size = Buffer.byteLength(character, 'utf8');
+      if (bytes + size > limit) break;
+      excerpt += character;
+      bytes += size;
+    }
+    return { excerpt, truncated: bytes < Buffer.byteLength(value, 'utf8') };
+  };
+  const summaryHeader = '\n### Bun security audit\n\nKnown mitigations do not turn a failing raw audit into a successful raw audit.\n\n```json\n';
+  const summaryEnd = '\n```\n';
+  const summaryOmitted = '\n一部を省略しました。\n';
+  let summaryComplete = false;
+  if (process.env.GITHUB_STEP_SUMMARY) {
+    let existingBytes = 0;
+    try { existingBytes = statSync(process.env.GITHUB_STEP_SUMMARY).size; }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    const available = 900000 - existingBytes - Buffer.byteLength(summaryHeader + summaryEnd + summaryOmitted, 'utf8');
+    if (available >= 0) {
+      const summary = truncateUtf8(JSON.stringify(audit, null, 2), available);
+      summaryComplete = !summary.truncated;
+      appendFileSync(process.env.GITHUB_STEP_SUMMARY, summaryHeader + summary.excerpt + summaryEnd + (summary.truncated ? summaryOmitted : ''));
+    }
+  }
   const repo = await metadata(api);
   const diagnostics = JSON.stringify({ remaining: result.remaining, error: result.error,
     needs_followup: result.needs_followup, upstreamFixes: result.upstreamFixes,
     nativeFix: result.nativeFix && { exitCode: result.nativeFix.exitCode, stderr: result.nativeFix.stderr } }, null, 2);
+  const diagnostic = truncateUtf8(diagnostics, 30000);
+  const omitted = diagnostic.truncated ? '\nIssue の診断情報は一部を省略しました。' : '';
+  const summaryNotice = summaryComplete ? '完全版は workflow summary を参照してください。' : 'workflow summary も一部または全部が省略されています。';
   const prLink = /^\d+$/.test(options.pr || '') ? `\nPR: https://github.com/${api.repository}/pull/${options.pr}\n` : '';
-  const body = `${marker}\nBun security automation: ${String(result.status)}\n\nRemaining advisories: ${Array.isArray(result.remaining) ? result.remaining.length : 'see workflow summary'}\n\n${String(options.details || '')}${prLink}\n\nWorkflow: https://github.com/${api.repository}/actions/runs/${process.env.GITHUB_RUN_ID || ''}\n\n\`\`\`json\n${diagnostics.slice(0, 50000)}\n\`\`\`\nFull unfiltered audit is in the workflow summary.`;
+  const auditBody = `${marker}\nBun security automation: ${String(result.status)}\n\nRemaining advisories: ${Array.isArray(result.remaining) ? result.remaining.length : 'see workflow summary'}\n\n${String(options.details || '')}${prLink}\n\nWorkflow: https://github.com/${api.repository}/actions/runs/${process.env.GITHUB_RUN_ID || ''}\n\n\`\`\`json\n${diagnostic.excerpt}\n\`\`\`${omitted}\n${summaryNotice}`;
   if (!repo.has_issues) return { issue_reporting: 'disabled' };
   let existing;
   for (let page = 1; page <= 10; page++) {
@@ -315,6 +342,19 @@ export async function report(api, options) {
     if (existing || issues.length < 100) break;
     assert(page < 10, 'Too many issues to deduplicate safely');
   }
+  // 後続工程の状態は監査本文を保持し、管理領域だけを置換する。
+  const stageMarker = '<!-- bun-security-stage -->';
+  const previous = existing?.body || '';
+  const stageIndex = previous.indexOf(`\n\n${stageMarker}\n`);
+  assert(stageIndex < 0 || previous.indexOf(`\n\n${stageMarker}\n`, stageIndex + 1) < 0, 'Ambiguous notification stage');
+  const priorAudit = stageIndex < 0 ? previous : previous.slice(0, stageIndex);
+  const stageHeading = '最後に報告された工程（過去runの可能性あり）';
+  let priorStage = stageIndex < 0 ? '' : previous.slice(stageIndex);
+  if (priorStage && !priorStage.startsWith(`\n\n${stageMarker}\n${stageHeading}\n`))
+    priorStage = priorStage.replace(`\n\n${stageMarker}\n`, `\n\n${stageMarker}\n${stageHeading}\n`);
+  const stage = `\n\n${stageMarker}\n${stageHeading}\nBun security automation: ${String(result.status)}\n\n${String(options.details || '')}${prLink}\n\nWorkflow: https://github.com/${api.repository}/actions/runs/${process.env.GITHUB_RUN_ID || ''}`;
+  const body = options.report ? auditBody + priorStage : (priorAudit || marker) + stage;
+  const checkBody = () => assert(Buffer.byteLength(body, 'utf8') <= 65536, 'Notification exceeds GitHub issue body limit; preserving existing issue');
   const problem = result.needs_followup === true || result.upstreamFixes?.length > 0 || result.remaining?.length || ['unfixable', 'blocked', 'error', 'validation-failed', 'prepare-failed', 'merge-failed'].includes(result.status);
   if (!problem) {
     // 監査の clean/mitigated は既存 PR の CI 成功を証明しない。
@@ -326,8 +366,13 @@ export async function report(api, options) {
       resolved = open.length === 0;
     }
     if (existing && resolved) await api.request(`/issues/${existing.number}`, 'PATCH', { state: 'closed' });
+    else if (existing && options.report) {
+      checkBody();
+      await api.request(`/issues/${existing.number}`, 'PATCH', { body });
+    }
     return { issue_reporting: existing && !resolved ? 'unchanged' : 'clear' };
   }
+  checkBody();
   const payload = { title: 'Bun: 自動修正できない脆弱性の確認', body };
   const issue = existing ? await api.request(`/issues/${existing.number}`, 'PATCH', payload) : await api.request('/issues', 'POST', payload);
   return { issue_number: issue.number };

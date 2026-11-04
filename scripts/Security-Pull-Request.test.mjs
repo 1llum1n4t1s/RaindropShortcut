@@ -175,7 +175,9 @@ test('approved mitigated advisory creates no issue; failure reuses owned marker 
   assert.equal(writes[0][1], 'PATCH');
   writes.length = 0;
   assert.deepEqual(await report(api, { report: file }), { issue_reporting: 'unchanged' });
-  assert.equal(writes.length, 0, 'Pre-validation audit must not close a CI-failure issue');
+  assert.equal(writes.length, 1, 'Pre-validation audit refreshes the issue without closing it');
+  assert.equal(writes[0][2].state, undefined);
+  writes.length = 0;
   const summary = join(fixtures, 'summary.md');
   const oldSummary = process.env.GITHUB_STEP_SUMMARY;
   process.env.GITHUB_STEP_SUMMARY = summary;
@@ -187,7 +189,7 @@ test('approved mitigated advisory creates no issue; failure reuses owned marker 
   assert.match(readFileSync(summary, 'utf8'), /"rawAuditSucceeded": false/);
   assert.match(readFileSync(summary, 'utf8'), /"deepmerge"/);
   assert.deepEqual(await report(api, { status: 'resolved' }), { issue_reporting: 'clear' });
-  assert.deepEqual(writes[0], ['/issues/4', 'PATCH', { state: 'closed' }]);
+  assert.deepEqual(writes.at(-1), ['/issues/4', 'PATCH', { state: 'closed' }]);
   writes.length = 0;
   writeFileSync(file, JSON.stringify({ status: 'remaining', result_changed: true, remaining: [{ package: 'unfixed', url: 'https://example.invalid/advisory' }] }));
   await report(api, { report: file });
@@ -204,6 +206,100 @@ test('approved mitigated advisory creates no issue; failure reuses owned marker 
   finally { if (oldSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY; else process.env.GITHUB_STEP_SUMMARY = oldSummary; }
   assert.match(readFileSync(summary, 'utf8'), /"remainingCount": null/);
   assert.match(readFileSync(summary, 'utf8'), /"mitigatedCount": null/);
+});
+test('stage notifications preserve and refresh audit details without growing on retries', async () => {
+  const file = join(fixtures, 'stage-report.json');
+  let issue;
+  const api = { repository: 'owner/repo', async request(path, method = 'GET', payload) {
+    if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
+    if (path.startsWith('/issues?')) return issue ? [issue] : [];
+    if (method === 'POST' || method === 'PATCH') {
+      issue = { ...issue, ...payload, number: 4, user: { id: 41898282 } };
+      return issue;
+    }
+    throw Error(`Unexpected request: ${path}`);
+  } };
+  const audit = advisory => writeFileSync(file, JSON.stringify({ status: 'blocked', remaining: [{ advisory }], upstreamFixes: [{ to: '5.0.0' }] }));
+  audit('GHSA-first');
+  await report(api, { report: file });
+  await report(api, { status: 'blocked', details: 'validation=success; merge paused', pr: '42' });
+  assert.match(issue.body, /GHSA-first/);
+  assert.match(issue.body, /5\.0\.0/);
+  assert.match(issue.body, /validation=success; merge paused/);
+  assert.match(issue.body, /最後に報告された工程（過去runの可能性あり）/);
+  assert.match(issue.body, /pull\/42/);
+  const first = issue.body;
+  await report(api, { status: 'blocked', details: 'validation=success; merge paused', pr: '42' });
+  assert.equal(issue.body, first);
+  audit('GHSA-new');
+  await report(api, { report: file });
+  assert.match(issue.body, /GHSA-new/);
+  assert.doesNotMatch(issue.body, /GHSA-first/);
+  assert.match(issue.body, /merge paused/);
+  assert.match(issue.body, /最後に報告された工程（過去runの可能性あり）/);
+  issue.body = issue.body.replace('最後に報告された工程（過去runの可能性あり）\n', '');
+  await report(api, { report: file });
+  assert.match(issue.body, /最後に報告された工程（過去runの可能性あり）/);
+  await report(api, { status: 'prepare-failed', details: 'prepare=failure' });
+  assert.match(issue.body, /GHSA-new/);
+  assert.match(issue.body, /prepare-failed/);
+  assert.doesNotMatch(issue.body, /merge paused/);
+  const large = '<!-- bun-security-automation -->\n' + 'x'.repeat(65500);
+  issue.body = large;
+  await assert.rejects(report(api, { status: 'validation-failed', details: 'CI failed' }), /issue body limit/);
+  assert.equal(issue.body, large, 'Oversized update must not overwrite the issue');
+  await report(api, { status: 'resolved' });
+  assert.equal(issue.state, 'closed', 'Closing does not send or validate the existing body');
+  assert.equal(issue.body, large);
+});
+test('large multibyte audit is truncated safely when creating an issue', async () => {
+  const file = join(fixtures, 'large-audit.json');
+  writeFileSync(file, JSON.stringify({ status: 'error', error: '障害😀'.repeat(30000) }));
+  let body;
+  const api = { repository: 'owner/repo', async request(path, method = 'GET', payload) {
+    if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
+    if (path.startsWith('/issues?')) return [];
+    assert.equal(method, 'POST');
+    body = payload.body;
+    return { number: 4 };
+  } };
+  await report(api, { report: file });
+  assert.ok(Buffer.byteLength(body, 'utf8') <= 65536);
+  assert.match(body, /障害😀/);
+  assert.match(body, /Issue の診断情報は一部を省略しました。/);
+  assert.doesNotMatch(body, /\uFFFD/);
+});
+test('truncated native fix stderr remains complete in the workflow summary', async () => {
+  const file = join(fixtures, 'large-native-fix.json');
+  const summary = join(fixtures, 'large-native-fix-summary.md');
+  writeFileSync(file, JSON.stringify({ status: 'error', nativeFix: { exitCode: 1, stderr: '障'.repeat(25000) + 'NATIVE-STDERR-END' } }));
+  let body;
+  const api = { repository: 'owner/repo', async request(path, method = 'GET', payload) {
+    if (path === '') return { full_name: 'owner/repo', default_branch: 'main', has_issues: true };
+    if (path.startsWith('/issues?')) return [];
+    assert.equal(method, 'POST');
+    body = payload.body;
+    return { number: 4 };
+  } };
+  const oldSummary = process.env.GITHUB_STEP_SUMMARY;
+  process.env.GITHUB_STEP_SUMMARY = summary;
+  try { await report(api, { report: file }); }
+  finally { if (oldSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY; else process.env.GITHUB_STEP_SUMMARY = oldSummary; }
+  assert.match(body, /完全版は workflow summary/);
+  assert.doesNotMatch(body, /NATIVE-STDERR-END/);
+  assert.match(readFileSync(summary, 'utf8'), /NATIVE-STDERR-END/);
+  assert.match(readFileSync(summary, 'utf8'), /"exitCode": 1/);
+  writeFileSync(file, JSON.stringify({ status: 'error', nativeFix: { exitCode: 1, stderr: '障害😀'.repeat(200000) + 'TOO-LARGE-END' } }));
+  const largeSummary = join(fixtures, 'huge-native-fix-summary.md');
+  process.env.GITHUB_STEP_SUMMARY = largeSummary;
+  try { await report(api, { report: file }); }
+  finally { if (oldSummary === undefined) delete process.env.GITHUB_STEP_SUMMARY; else process.env.GITHUB_STEP_SUMMARY = oldSummary; }
+  const summaryText = readFileSync(largeSummary, 'utf8');
+  assert.ok(Buffer.byteLength(summaryText, 'utf8') <= 900000);
+  assert.match(summaryText, /一部を省略しました。/);
+  assert.doesNotMatch(summaryText, /TOO-LARGE-END/);
+  assert.match(body, /workflow summary も一部または全部が省略されています/);
+  assert.doesNotMatch(body, /完全版は workflow summary/);
 });
 test('protected branch is held after exact server merge validation without git push', async () => {
   const [base, head, tested] = ['1', '2', '3'].map(value => value.repeat(40));
