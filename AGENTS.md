@@ -202,7 +202,7 @@ Firefox AMO も publish.yml の firefox job が `web-ext sign` (`--approval-time
 
 ### AMO 公開のHTTP境界
 
-公開workflowは生成した最終XPIを既存の配布物検証へ通し、SHA-256・GUID・versionを `scripts/Publish-Amo.ps1`（PowerShell 7）へ渡す。旧web-ext sign/承認タイムアウトを成功化する手順に代えて、JWT認証・全ページの非公開listed版検査・upload検証・GUIDに対するPUT提出の受付応答まで確認する。XPIの同一snapshotをhash検証と送信に使い、保存UUIDの再利用・重複・不明な受付結果は停止する。CI成功は審査完了・ストア公開を意味しない。
+公開workflowは生成した最終XPIを既存の配布物検証へ通し、SHA-256・GUID・versionを `scripts/Publish-Amo.ps1`（PowerShell 7.2 以上）へ渡す。旧web-ext sign/承認タイムアウトを成功化する手順に代えて、JWT認証・全ページの非公開listed版検査・upload検証・GUIDに対するPUT提出の受付応答まで確認する。XPIの同一snapshotをhash検証と送信に使い、保存UUIDの再利用・重複・不明な受付結果は停止する。CI成功は審査完了・ストア公開を意味しない。
 
 掲載情報は `pwsh -NoProfile -File scripts/Update-AmoListing.ps1`、画像は `pwsh -NoProfile -File scripts/Update-AmoPreviews.ps1` で更新する。`-DryRun` は外部接続せず入力を表示し、画像の `-Check` は現状取得だけ行う。画像差し替えは全入力ファイルを確認し、新画像3枚すべての受付後に既存画像を削除する。途中拒否は旧画像を維持して停止し、追加済みIDを示して再実行前の確認を促す。文言の正本は `webstore/amo-listing.json` と日本語privacy文書。
 
