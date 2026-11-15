@@ -1,0 +1,148 @@
+/* tokens.css — ストア掲載画像のデザイントークンと共通部品（DESIGN-BRIEF の確定仕様）。
+   背景・ガラス面・実UI枠・タイポ・レイアウト型 A〜D の共通スタイルをここに集約する。
+   変数 --h / --primary / --secondary / --font は compose.mjs が :root へ注入する。 */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  position: relative;
+  overflow: hidden;
+  width: var(--w);
+  height: var(--h-px);
+  color: #F5F7FA;
+  font-family: var(--font);
+  font-weight: 500;
+  line-height: 1.5;
+  background: linear-gradient(135deg, hsl(var(--h) 50% 9%), hsl(var(--h) 55% 16%));
+  /* 和文は文節で折る（Chrome 119+）。他言語には無害 */
+  word-break: auto-phrase;
+  overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 背景: 主色・副色のぼかし円と、3% のノイズ（すべて CSS） */
+.orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .35; pointer-events: none; }
+.orb.p { background: var(--primary); width: 560px; height: 560px; left: -140px; top: -180px; }
+.orb.s { background: var(--secondary); width: 520px; height: 520px; right: -120px; bottom: -200px; }
+.noise {
+  position: absolute; inset: 0; opacity: .03; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+/* ガラス面 */
+.glass {
+  position: relative;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 28px;
+}
+.glass::before {
+  content: ""; position: absolute; left: 28px; right: 28px; top: -1px; height: 1px;
+  background: rgba(255, 255, 255, .18);
+}
+
+/* 実UI枠（UI は等倍。拡大は撮影時の deviceScaleFactor で行い、ここでは縮小も拡大もしない） */
+.ui-frame {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, .45);
+  background: #111;
+  flex: none;
+}
+.ui-frame img { display: block; }
+
+/* 簡易ブラウザ枠（レイアウト C）。外形 1120x560、上のバー 36px。ページ名・URL・他社ロゴは描かない */
+.browser {
+  position: relative; width: 1120px; height: 560px;
+  border-radius: 20px; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 40px 80px rgba(0, 0, 0, .45);
+  background: #fff;
+}
+.browser .bar { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: #2b2d33; }
+.browser .bar i { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, .28); }
+.browser .bar b { flex: 1; height: 20px; margin-left: 12px; border-radius: 999px; background: rgba(255, 255, 255, .1); }
+.browser img { display: block; width: 1120px; height: 524px; object-fit: cover; object-position: top left; }
+
+/* タイポグラフィ */
+.kicker { font-size: 16px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--secondary); margin: 0 0 16px; }
+.title { font-weight: 800; line-height: 1.15; margin: 0; text-wrap: balance; }
+.lead { font-weight: 500; line-height: 1.5; color: rgba(255, 255, 255, .72); margin: 0; text-wrap: pretty; }
+.bullets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.bullets li { position: relative; padding-left: 28px; font-weight: 600; line-height: 1.5; color: #F5F7FA; }
+.bullets li::before {
+  content: ""; position: absolute; left: 4px; top: .6em; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--secondary); box-shadow: 0 0 12px var(--secondary);
+}
+.chips { display: flex; flex-wrap: wrap; gap: 12px; }
+.chip {
+  font-size: 18px; font-weight: 600; line-height: 1.3; padding: 10px 20px; border-radius: 999px;
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); color: #F5F7FA;
+}
+
+/* 共通の配置 */
+.slide { position: absolute; inset: 64px; display: flex; }
+.col { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.right { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.gap-s > * + * { margin-top: 24px; }
+
+/* A: ヒーロー */
+.hero .left { flex: 0 0 560px; }
+.hero .icon { width: 160px; height: 160px; filter: drop-shadow(0 20px 32px rgba(0, 0, 0, .45)); margin-bottom: 32px; }
+.hero .name { font-weight: 800; line-height: 1.15; margin: 0 0 16px; }
+.hero .chips { margin-top: 32px; }
+.hero .right { flex: 1; }
+
+/* B: 機能説明（左 44%・右 56%） */
+.feature { gap: 48px; }
+.feature .left { flex: 0 0 44%; max-width: 44%; }
+.feature .left .title { margin-bottom: 24px; }
+.feature .left .bullets { margin-top: 32px; }
+.feature .right { flex: 1; }
+
+/* C: ワイド（上に見出し、下に簡易ブラウザ枠） */
+.wide { flex-direction: column; align-items: stretch; }
+.wide .head { height: 112px; }
+.wide .head .title { margin-bottom: 8px; }
+.wide .stage { position: absolute; left: 16px; bottom: 0; }
+
+/* D: 図解（3 ステップのカード） */
+.steps { flex-direction: column; justify-content: center; }
+.steps .head { margin-bottom: 40px; }
+.steps .cards { display: flex; gap: 24px; flex: none; height: 360px; }
+.steps .card { flex: 1; padding: 32px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.steps .num {
+  width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; color: #0b0f14; background: var(--secondary);
+}
+.steps .card h3 { font-size: 28px; font-weight: 800; line-height: 1.2; margin: 0; }
+.steps .card p { font-size: 20px; line-height: 1.5; margin: 0; color: rgba(255, 255, 255, .72); }
+
+/* スモークの代替板（実UIを撮らないプロファイル） */
+.smoke-board {
+  display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 800; letter-spacing: .2em;
+  color: rgba(255, 255, 255, .5); background: repeating-linear-gradient(45deg, #1c1f26, #1c1f26 16px, #23272f 16px, #23272f 32px);
+}
+
+/* タイル（ロケール共通・表記は英字） */
+.tile-small { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.tile-small .icon { width: 132px; height: 132px; filter: drop-shadow(0 12px 20px rgba(0, 0, 0, .45)); }
+.tile-small .mark { font-weight: 800; line-height: 1.15; text-align: center; padding: 0 24px; max-width: 100%; }
+.marquee { position: absolute; inset: 0; }
+.marquee .ghost { position: absolute; left: 990px; right: -200px; top: 0; bottom: 0; display: flex; align-items: center; justify-content: flex-start; opacity: .38;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22%); mask-image: linear-gradient(90deg, transparent 0, #000 22%); }
+.marquee .ghost .ui-frame { box-shadow: none; }
+.marquee .main { position: absolute; left: 64px; top: 0; bottom: 0; right: 64px; display: flex; align-items: center; gap: 48px; }
+.marquee .icon { width: 260px; height: 260px; flex: none; filter: drop-shadow(0 20px 32px rgba(0, 0, 0, .45)); }
+.marquee .texts { min-width: 0; flex: 0 0 590px; display: flex; flex-direction: column; gap: 16px; }
+.marquee .mark { font-weight: 800; line-height: 1.1; margin: 0; white-space: nowrap; }
+.marquee .tag { margin: 0; font-weight: 500; color: rgba(255, 255, 255, .72); white-space: nowrap; }
+
+/* 小タイル（440x280）はぼかし円を小さくし、色が濁らないようにする */
+.t-small .orb { width: 260px; height: 260px; filter: blur(60px); }
+.t-small .orb.p { left: -60px; top: -80px; }
+.t-small .orb.s { right: -60px; bottom: -90px; }
+
+/* 文言マークアップ [[語句]]（途中で折り返さない） */
+.nb { white-space: nowrap; }

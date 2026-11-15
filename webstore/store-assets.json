@@ -1,0 +1,299 @@
+{
+  "brand": "Raindrop Shortcuts",
+  "icon": "icons/icon.svg",
+  "extensionDir": ".",
+  "palette": {
+    "primary": "#1C8FE6",
+    "secondary": "#5FE0FF"
+  },
+  "locales": [
+    "en",
+    "ja",
+    "zh_CN",
+    "zh_TW",
+    "ko",
+    "es",
+    "fr",
+    "de",
+    "pt_BR"
+  ],
+  "captures": [
+    {
+      "id": "popup-main",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "accessToken": "dummy-access-token-for-store-assets",
+        "refreshToken": "dummy-refresh-token-for-store-assets",
+        "tokenExpiry": 4102444800000,
+        "themeMode": "light"
+      }
+    },
+    {
+      "id": "popup-search",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "accessToken": "dummy-access-token-for-store-assets",
+        "refreshToken": "dummy-refresh-token-for-store-assets",
+        "tokenExpiry": 4102444800000,
+        "themeMode": "light"
+      }
+    },
+    {
+      "id": "popup-collections",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "accessToken": "dummy-access-token-for-store-assets",
+        "refreshToken": "dummy-refresh-token-for-store-assets",
+        "tokenExpiry": 4102444800000,
+        "themeMode": "light",
+        "selectedCollection": {
+          "_id": 1002,
+          "title": "Design references"
+        }
+      }
+    },
+    {
+      "id": "popup-dark",
+      "kind": "popup",
+      "page": "src/popup/popup.html",
+      "storage": {
+        "accessToken": "dummy-access-token-for-store-assets",
+        "refreshToken": "dummy-refresh-token-for-store-assets",
+        "tokenExpiry": 4102444800000,
+        "themeMode": "dark"
+      }
+    }
+  ],
+  "slides": [
+    {
+      "layout": "hero",
+      "capture": "popup-main",
+      "tagline": {
+        "msg": "appDescription"
+      },
+      "chips": [
+        {
+          "en": "One click to your bookmarks",
+          "ja": "ワンクリックでブックマークへ",
+          "zh_CN": "一键打开书签",
+          "zh_TW": "一鍵開啟書籤",
+          "ko": "클릭 한 번으로 북마크 열기",
+          "es": "Sus marcadores con un clic",
+          "fr": "Vos favoris en un clic",
+          "de": "Lesezeichen mit einem Klick",
+          "pt_BR": "Seus favoritos com um clique"
+        },
+        {
+          "en": "Search by title or domain",
+          "ja": "タイトル・ドメインで検索",
+          "zh_CN": "按标题或域名搜索",
+          "zh_TW": "依標題或網域搜尋",
+          "ko": "제목·도메인으로 검색",
+          "es": "Búsqueda por título o dominio",
+          "fr": "Recherche par titre ou domaine",
+          "de": "Suche nach Titel oder Domain",
+          "pt_BR": "Busca por título ou domínio"
+        },
+        {
+          "en": "Light and dark themes",
+          "ja": "ライト・ダーク対応",
+          "zh_CN": "支持浅色和深色主题",
+          "zh_TW": "支援淺色與深色主題",
+          "ko": "라이트·다크 테마 지원",
+          "es": "Tema claro y oscuro",
+          "fr": "Thèmes clair et sombre",
+          "de": "Helles und dunkles Design",
+          "pt_BR": "Temas claro e escuro"
+        }
+      ]
+    },
+    {
+      "layout": "feature",
+      "capture": "popup-search",
+      "kicker": {
+        "msg": "mainSearchLabel"
+      },
+      "title": {
+        "en": "Find bookmarks as you type",
+        "ja": "入力しながら、すぐ絞り込む",
+        "zh_CN": "边输入边筛选书签",
+        "zh_TW": "邊輸入邊篩選書籤",
+        "ko": "입력하는 즉시 북마크 찾기",
+        "es": "Encuentre marcadores mientras escribe",
+        "fr": "Trouvez vos favoris en tapant",
+        "de": "Lesezeichen schon beim Tippen finden",
+        "pt_BR": "Encontre favoritos enquanto digita"
+      },
+      "body": {
+        "en": "Type in the search box to narrow the list by title or domain name.",
+        "ja": "検索欄に入力すると、タイトルやドメイン名で一覧を絞り込みます。",
+        "zh_CN": "在搜索栏输入，即可按标题或域名筛选列表。",
+        "zh_TW": "在搜尋欄輸入，即可依標題或網域篩選清單。",
+        "ko": "검색창에 입력하면 제목이나 도메인 이름으로 목록이 좁혀집니다.",
+        "es": "Escriba en el cuadro de búsqueda para filtrar la lista por título o nombre de dominio.",
+        "fr": "Saisissez du texte dans la zone de recherche pour filtrer la liste par titre ou nom de domaine.",
+        "de": "Geben Sie einen Suchbegriff ein, um die Liste nach Titel oder Domainnamen einzugrenzen.",
+        "pt_BR": "Digite na caixa de pesquisa para filtrar a lista por título ou nome de domínio."
+      },
+      "bullets": [
+        {
+          "en": "Filters the list on your device",
+          "ja": "絞り込みは端末内で完結",
+          "zh_CN": "筛选在本机完成",
+          "zh_TW": "篩選在本機完成",
+          "ko": "필터링은 기기 안에서 처리",
+          "es": "El filtrado se hace en su dispositivo",
+          "fr": "Le filtrage s’effectue sur votre appareil",
+          "de": "Gefiltert wird direkt auf Ihrem Gerät",
+          "pt_BR": "O filtro roda no seu dispositivo"
+        },
+        {
+          "en": "Compact rows: favicon, title and domain",
+          "ja": "ファビコン・タイトル・ドメインを1行で表示",
+          "zh_CN": "图标、标题和域名同显于一行",
+          "zh_TW": "圖示、標題與網域顯示於同一行",
+          "ko": "파비콘·제목·도메인을 한 줄로 표시",
+          "es": "Filas compactas con favicon, título y dominio",
+          "fr": "Lignes compactes : favicon, titre et domaine",
+          "de": "Kompakte Zeilen mit Favicon, Titel und Domain",
+          "pt_BR": "Linhas compactas com favicon, título e domínio"
+        },
+        {
+          "en": "Keyboard friendly: Enter or Space opens an item",
+          "ja": "Enter / Space キーでも開けます",
+          "zh_CN": "按 Enter 或 Space 键也可打开",
+          "zh_TW": "按 Enter 或 Space 鍵也能開啟",
+          "ko": "Enter 또는 Space 키로도 열기",
+          "es": "Con teclado: abra con Enter o Space",
+          "fr": "Au clavier : Enter ou Space ouvre un favori",
+          "de": "Per Tastatur: Enter oder Space öffnet einen Eintrag",
+          "pt_BR": "Pelo teclado: Enter ou Space abre o item"
+        }
+      ]
+    },
+    {
+      "layout": "feature",
+      "capture": "popup-collections",
+      "kicker": {
+        "msg": "settingsCollections"
+      },
+      "title": {
+        "en": "Choose the collection you want",
+        "ja": "表示するコレクションを選ぶ",
+        "zh_CN": "选择要显示的收藏夹",
+        "zh_TW": "選擇要顯示的收藏集",
+        "ko": "표시할 컬렉션 선택",
+        "es": "Elija la colección que quiere ver",
+        "fr": "Choisissez la collection à afficher",
+        "de": "Sammlung zum Anzeigen auswählen",
+        "pt_BR": "Escolha a coleção que deseja ver"
+      },
+      "body": {
+        "en": "Pick any collection from your Raindrop.io tree, or show All.",
+        "ja": "Raindrop.io のコレクションツリーから表示対象を選べます。「すべて」も選べます。",
+        "zh_CN": "可从 Raindrop.io 的收藏夹树中选择要显示的内容，也可选择“全部”。",
+        "zh_TW": "可從 Raindrop.io 的收藏集樹狀結構選擇顯示[[對象]]，也可選擇「全部」。",
+        "ko": "Raindrop.io 컬렉션 트리에서 표시할 컬렉션을 고르거나 ‘전체’를 선택할 수 있습니다.",
+        "es": "Elija cualquier colección de su árbol de Raindrop.io o muestre todas.",
+        "fr": "Choisissez n’importe quelle collection de votre arborescence Raindrop.io, ou affichez-les toutes.",
+        "de": "Wählen Sie eine beliebige Sammlung aus Ihrer Raindrop.io-Struktur oder zeigen Sie alle an.",
+        "pt_BR": "Escolha qualquer coleção da sua árvore do Raindrop.io ou mostre todas."
+      },
+      "bullets": [
+        {
+          "en": "Sub-collections at any depth",
+          "ja": "サブコレクションも階層を問わず選択可",
+          "zh_CN": "子收藏夹不限层级，均可选择",
+          "zh_TW": "子收藏集不限層級，皆可選擇",
+          "ko": "하위 컬렉션도 깊이에 관계없이 선택",
+          "es": "Subcolecciones de cualquier nivel",
+          "fr": "Sous-collections à tous les niveaux",
+          "de": "Untersammlungen in beliebiger Tiefe",
+          "pt_BR": "Subcoleções em qualquer nível"
+        },
+        {
+          "en": "Open links in a new or the current tab",
+          "ja": "リンクは新しいタブ／現在のタブで開く",
+          "zh_CN": "链接可在新标签页或当前标签页打开",
+          "zh_TW": "連結可在新分頁或目前分頁開啟",
+          "ko": "링크를 새 탭 또는 현재 탭에서 열기",
+          "es": "Abra enlaces en una pestaña nueva o en la actual",
+          "fr": "Liens ouverts dans un nouvel onglet ou l’onglet actuel",
+          "de": "Links im neuen oder im aktuellen Tab öffnen",
+          "pt_BR": "Abra links em uma nova aba ou na aba atual"
+        },
+        {
+          "en": "Saved list appears instantly",
+          "ja": "保存済みの一覧をすぐ表示",
+          "zh_CN": "已保存的列表即时显示",
+          "zh_TW": "已儲存的清單即時顯示",
+          "ko": "저장된 목록을 즉시 표시",
+          "es": "La lista guardada aparece al instante",
+          "fr": "La liste enregistrée s’affiche aussitôt",
+          "de": "Gespeicherte Liste erscheint sofort",
+          "pt_BR": "A lista salva aparece na hora"
+        }
+      ]
+    },
+    {
+      "layout": "feature",
+      "capture": "popup-dark",
+      "kicker": {
+        "msg": "settingsTheme"
+      },
+      "title": {
+        "en": "Light, dark or automatic",
+        "ja": "ライト、ダーク、自動から選択",
+        "zh_CN": "浅色、深色或自动",
+        "zh_TW": "淺色、深色或自動",
+        "ko": "라이트, 다크, 자동 중 선택",
+        "es": "Claro, oscuro o automático",
+        "fr": "Clair, sombre ou automatique",
+        "de": "Hell, dunkel oder automatisch",
+        "pt_BR": "Claro, escuro ou automático"
+      },
+      "body": {
+        "en": "Choose Auto to follow your system setting, or set Light or Dark yourself.",
+        "ja": "「自動」ならOSの設定に追従。ライト／ダークを固定することもできます。",
+        "zh_CN": "选择“自动”可跟随系统设置，也可固定为浅色或深色。",
+        "zh_TW": "選擇「自動」會跟隨系統設定，也可固定為淺色或深色。",
+        "ko": "‘자동’은 시스템 설정을 따르며, 라이트 또는 다크로 고정할 수도 있습니다.",
+        "es": "Elija Auto para seguir el ajuste del sistema, o fije Claro u Oscuro.",
+        "fr": "Choisissez Auto pour suivre le réglage du système, ou fixez Clair ou Sombre.",
+        "de": "Mit Auto folgt das Design der Systemeinstellung, oder legen Sie Hell oder Dunkel fest.",
+        "pt_BR": "Escolha Auto para seguir a configuração do sistema ou defina Claro ou Escuro."
+      },
+      "bullets": [
+        {
+          "en": "Your choice is remembered",
+          "ja": "選択は次回以降も保持",
+          "zh_CN": "所选主题会被保留",
+          "zh_TW": "所選主題會保留",
+          "ko": "선택한 테마가 유지됨",
+          "es": "Se recuerda su elección",
+          "fr": "Votre choix est mémorisé",
+          "de": "Ihre Wahl bleibt erhalten",
+          "pt_BR": "Sua escolha é lembrada"
+        },
+        {
+          "en": "Same compact layout in every theme",
+          "ja": "どのテーマでも同じコンパクト表示",
+          "zh_CN": "各主题下布局一致、简洁紧凑",
+          "zh_TW": "各主題皆為相同的精簡版面",
+          "ko": "모든 테마에서 같은 간결한 레이아웃",
+          "es": "El mismo diseño compacto en cualquier tema",
+          "fr": "Même présentation compacte dans tous les thèmes",
+          "de": "Überall dasselbe kompakte Layout",
+          "pt_BR": "O mesmo layout compacto em qualquer tema"
+        }
+      ]
+    }
+  ],
+  "tiles": {
+    "tagline": "Open Raindrop.io bookmarks fast",
+    "capture": "popup-main"
+  }
+}
