@@ -1,0 +1,44 @@
+Extensão do Chrome que mostra em uma lista compacta os favoritos que você salvou no Raindrop.io, bastando clicar no ícone da barra de ferramentas.
+
+■ Principais recursos
+
+・Lista de favoritos com um clique
+  Ao clicar no ícone da barra de ferramentas, os favoritos da coleção selecionada são exibidos em ordem de título.
+
+・Seleção de coleção (pasta)
+  Nas configurações, você escolhe o que exibir a partir da árvore de coleções do Raindrop.io.
+  É possível selecionar subcoleções em qualquer nível de profundidade, e escolher "Todas" exibe todos os favoritos.
+
+・Pesquisa incremental
+  Ao digitar na caixa de pesquisa, os favoritos exibidos são filtrados por título ou nome de domínio.
+
+・Escolha de como os links abrem
+  Nas configurações, você escolhe se os favoritos abrem em uma "Nova aba" ou na "Aba atual".
+
+・Exibição rápida (cache local)
+  A lista de favoritos da coleção selecionada é obtida em segundo plano a cada 5 minutos e salva no seu dispositivo.
+  Ao clicar no ícone, a lista salva aparece imediatamente; se já se passaram mais de 5 minutos desde a última obtenção, a lista mais recente é obtida sem tirar da tela a que já está sendo exibida.
+
+・Suporte ao modo escuro
+  Você pode escolher o tema entre "Auto (segue a configuração do sistema operacional)", "Claro" e "Escuro".
+
+・Exibição compacta
+  Cada favorito ocupa uma linha com favicon, título e nome de domínio, o que facilita a visualização mesmo de uma grande quantidade de favoritos.
+
+・Operação pelo teclado
+  Você também pode selecionar favoritos e coleções com as teclas Enter / Space.
+
+・Autenticação OAuth 2.0
+  Você se conecta fazendo login na página de autenticação do Raindrop.io. Não é preciso digitar sua senha na extensão.
+  Ao sair da conta, as informações de login salvas e o cache da lista de favoritos são apagados do seu dispositivo.
+
+・Contato
+  Na parte inferior da tela de configurações, você pode enviar uma consulta sobre esta extensão. Na primeira vez, é necessário confirmar sua identidade com um código de confirmação enviado por e-mail.
+
+■ Como usar
+
+1. Instale pela Chrome Web Store
+2. Clique no ícone da barra de ferramentas e, em seguida, no botão "Entrar com o Raindrop.io"
+3. Autentique-se com sua conta do Raindrop.io (somente na primeira vez)
+4. A lista de favoritos é exibida
+5. Nas configurações (ícone ⚙), você pode alterar a coleção exibida, como os links abrem e o tema

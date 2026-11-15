@@ -1,0 +1,44 @@
+Eine Chrome-Erweiterung, die Ihre in Raindrop.io gespeicherten Lesezeichen mit einem Klick auf das Symbol in der Symbolleiste als kompakte Liste anzeigt.
+
+■ Hauptfunktionen
+
+・Lesezeichenliste mit einem Klick
+  Mit einem Klick auf das Symbol in der Symbolleiste werden die Lesezeichen der ausgewählten Sammlung nach Titel sortiert angezeigt.
+
+・Auswahl der Sammlung (Ordner)
+  In den Einstellungen wählen Sie im Sammlungsbaum von Raindrop.io aus, was angezeigt werden soll.
+  Untersammlungen lassen sich unabhängig von ihrer Verschachtelungstiefe auswählen; bei „Alle“ werden alle Lesezeichen angezeigt.
+
+・Inkrementelle Suche
+  Wenn Sie etwas in das Suchfeld eingeben, werden die angezeigten Lesezeichen nach Titel oder Domainname eingegrenzt.
+
+・Öffnungsart der Links wählbar
+  In den Einstellungen legen Sie fest, ob Lesezeichen in einem „Neuer Tab“ oder im „Aktueller Tab“ geöffnet werden.
+
+・Schnelle Anzeige (lokaler Cache)
+  Die Lesezeichenliste der ausgewählten Sammlung wird alle 5 Minuten im Hintergrund abgerufen und auf Ihrem Gerät gespeichert.
+  Ein Klick auf das Symbol zeigt sofort die gespeicherte Liste an. Liegt der letzte Abruf mehr als 5 Minuten zurück, wird die aktuelle Liste abgerufen, während die gespeicherte angezeigt bleibt.
+
+・Unterstützung für den dunklen Modus
+  Als Design stehen „Auto (folgt der Systemeinstellung)“, „Hell“ und „Dunkel“ zur Auswahl.
+
+・Kompakte Darstellung
+  Jedes Lesezeichen belegt eine Zeile mit Favicon, Titel und Domainname, sodass auch viele Lesezeichen übersichtlich bleiben.
+
+・Tastaturbedienung
+  Lesezeichen und Sammlungen lassen sich auch mit den Tasten Enter / Space auswählen.
+
+・OAuth-2.0-Authentifizierung
+  Sie verbinden sich, indem Sie sich auf der Authentifizierungsseite von Raindrop.io anmelden. Ihr Passwort müssen Sie nicht in die Erweiterung eingeben.
+  Beim Abmelden werden die gespeicherten Anmeldedaten und der Cache der Lesezeichenliste von Ihrem Gerät gelöscht.
+
+・Kontakt
+  Unten in den Einstellungen können Sie eine Anfrage zu dieser Erweiterung senden. Beim ersten Mal ist eine Bestätigung Ihrer Identität mit einem per E-Mail zugesandten Bestätigungscode erforderlich.
+
+■ So verwenden Sie die Erweiterung
+
+1. Aus dem Chrome Web Store installieren
+2. Auf das Symbol in der Symbolleiste klicken und die Schaltfläche „Mit Raindrop.io anmelden“ drücken
+3. Mit Ihrem Raindrop.io-Konto authentifizieren (nur beim ersten Mal)
+4. Die Lesezeichenliste wird angezeigt
+5. In den Einstellungen (⚙-Symbol) können Sie die angezeigte Sammlung, die Öffnungsart der Links und das Design ändern

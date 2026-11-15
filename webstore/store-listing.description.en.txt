@@ -1,0 +1,44 @@
+A Chrome extension that lists the bookmarks you saved in Raindrop.io in a compact view with a single click on the toolbar icon.
+
+■ Main features
+
+・Bookmark list in one click
+  Click the toolbar icon to see the bookmarks of the selected collection, sorted by title.
+
+・Collection (folder) selection
+  In the settings, choose what to show from your Raindrop.io collection tree.
+  You can select sub-collections at any depth, and choosing "All" shows all your bookmarks.
+
+・Incremental search
+  Type in the search box to narrow the displayed bookmarks by title or domain name.
+
+・Choose how links open
+  In the settings, choose whether bookmarks open in a "New tab" or in the "Current tab".
+
+・Fast display (local cache)
+  The bookmark list of the selected collection is fetched in the background every 5 minutes and stored on your device.
+  Click the icon to see the saved list right away. If more than 5 minutes have passed since the last fetch, the latest list is fetched while the saved one stays on screen.
+
+・Dark mode support
+  Choose the theme from "Auto (follows your OS setting)", "Light" or "Dark".
+
+・Compact layout
+  Each bookmark takes one line with its favicon, title and domain name, so even a large number of bookmarks is easy to scan.
+
+・Keyboard operation
+  You can also select bookmarks and collections with the Enter / Space keys.
+
+・OAuth 2.0 authentication
+  You log in on the Raindrop.io authentication page to connect. You never enter your password in the extension.
+  When you log out, the saved login information and the bookmark list cache are erased from your device.
+
+・Contact
+  From the bottom of the settings screen, you can send an inquiry about this extension. The first time, you need to verify your identity with a confirmation code sent by email.
+
+■ How to use
+
+1. Install from the Chrome Web Store
+2. Click the toolbar icon, then press the "Log in with Raindrop.io" button
+3. Authenticate with your Raindrop.io account (first time only)
+4. Your bookmark list appears
+5. In the settings (⚙ icon), you can change the collection to show, how links open and the theme

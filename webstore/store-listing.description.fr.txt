@@ -1,0 +1,44 @@
+Extension Chrome qui affiche sous forme de liste compacte les favoris que vous avez enregistrés dans Raindrop.io, d’un simple clic sur l’icône de la barre d’outils.
+
+■ Fonctionnalités principales
+
+・Liste des favoris en un clic
+  Cliquez sur l’icône de la barre d’outils pour afficher, par ordre de titre, les favoris de la collection sélectionnée.
+
+・Sélection de la collection (dossier)
+  Dans les paramètres, vous pouvez choisir ce qui est affiché à partir de l’arborescence des collections de Raindrop.io.
+  Les sous-collections sont sélectionnables quelle que soit leur profondeur, et le choix de « Toutes » affiche tous les favoris.
+
+・Recherche incrémentielle
+  Saisissez du texte dans le champ de recherche pour filtrer les favoris affichés par titre ou par nom de domaine.
+
+・Choix de l’ouverture des liens
+  Dans les paramètres, vous pouvez choisir d’ouvrir les favoris dans un « Nouvel onglet » ou dans l’« Onglet actuel ».
+
+・Affichage rapide (cache local)
+  La liste des favoris de la collection sélectionnée est récupérée en arrière-plan toutes les 5 minutes et enregistrée sur votre appareil.
+  Un clic sur l’icône affiche aussitôt la liste enregistrée ; si plus de 5 minutes se sont écoulées depuis la dernière récupération, la liste la plus récente est récupérée sans retirer celle qui est affichée.
+
+・Prise en charge du mode sombre
+  Vous pouvez choisir le thème parmi « Auto (selon le réglage du système d’exploitation) », « Clair » et « Sombre ».
+
+・Affichage compact
+  Chaque favori occupe une seule ligne avec sa favicon, son titre et son nom de domaine, ce qui permet de parcourir aisément même un grand nombre de favoris.
+
+・Utilisation au clavier
+  Vous pouvez aussi sélectionner les favoris et les collections avec les touches Enter / Space.
+
+・Authentification OAuth 2.0
+  Vous vous connectez depuis la page d’authentification de Raindrop.io. Il n’est pas nécessaire de saisir votre mot de passe dans l’extension.
+  Lorsque vous vous déconnectez, les informations de connexion enregistrées et le cache de la liste des favoris sont effacés de votre appareil.
+
+・Contact
+  Depuis le bas de l’écran des paramètres, vous pouvez envoyer une demande concernant cette extension. La première fois, une vérification d’identité par un code de confirmation reçu par e-mail est nécessaire.
+
+■ Mode d’emploi
+
+1. Installez l’extension depuis le Chrome Web Store
+2. Cliquez sur l’icône de la barre d’outils, puis sur le bouton « Se connecter avec Raindrop.io »
+3. Authentifiez-vous avec votre compte Raindrop.io (la première fois uniquement)
+4. La liste des favoris s’affiche
+5. Dans les paramètres (icône ⚙), vous pouvez modifier la collection affichée, l’ouverture des liens et le thème
