@@ -132,7 +132,10 @@ namespace Kagayoi.AmoSource
             uploadRequest.Content = form;
             var upload = Send(http, "Upload", uploadRequest);
             var uuid = Text(upload, "uuid");
-            if (uuid == null || !Regex.IsMatch(uuid, @"^[a-fA-F0-9-]{36}$")) throw new InvalidOperationException("Upload UUID not confirmed; acceptance unknown");
+            // AMO API v5 は upload UUID をハイフンなし32桁の16進 (UUID hex 形式) で返す。ハイフン付きの正規形も受け付け、
+            // どちらも後続の検証 URL のパスへそのまま入れるため、16進とハイフン以外を含む値は拒否する。
+            if (uuid == null || !Regex.IsMatch(uuid, @"^(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})$"))
+                throw new InvalidOperationException("Upload UUID not confirmed; acceptance unknown");
             var deadline = DateTime.UtcNow.AddMinutes(15);
             while (!True(upload, "processed") && DateTime.UtcNow < deadline)
             {

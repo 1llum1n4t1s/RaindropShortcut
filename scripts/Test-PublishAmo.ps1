@@ -76,7 +76,8 @@ foreach($case in 'success','pagination-success','duplicate','external-next','inc
  if($case -eq 'pagination-success'){$page.count=2;$page.results=@(@{id=1;version='0.1.0';channel='listed'});$page.next='https://addons.mozilla.org/api/v5/addons/addon/fixture%40example.com/versions/?filter=all_without_unlisted&page=2'}
  $handler.Bodies.Enqueue(($page|ConvertTo-Json -Depth 5 -Compress))
  if($case -eq 'pagination-success'){$handler.Bodies.Enqueue((@{count=2;next=$null;results=@(@{id=2;version='0.2.0';channel='listed'})}|ConvertTo-Json -Depth 5 -Compress))}
- $uuid='12345678-1234-1234-1234-123456789012'
+ # 実際の AMO API v5 は upload UUID をハイフンなし32桁の16進で返す。ハイフン付きの正規形も受け付けることを両方で確かめる。
+ $uuid=if($case -eq 'pagination-success'){'12345678-1234-1234-1234-123456789012'}else{'0123456789abcdef0123456789abcdef'}
  $handler.Bodies.Enqueue((@{uuid=$uuid;processed=$true;valid=($case -ne 'invalid-validation')}|ConvertTo-Json -Compress))
  $guid=if($case -eq 'wrong-submit'){'wrong'}else{'fixture@example.com'}
  $handler.Bodies.Enqueue((@{guid=$guid;version=@{id=1;version='1.2.3';channel='listed'}}|ConvertTo-Json -Depth 5 -Compress))
