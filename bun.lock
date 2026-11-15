@@ -5,7 +5,7 @@
     "": {
       "name": "raindrop-shortcut",
       "devDependencies": {
-        "@kagayoi/support-extension": "1.0.9",
+        "@kagayoi/support-extension": "1.0.12",
         "puppeteer": "^25.16.0",
         "sharp": "^0.35.5",
         "web-ext": "10.8.0",
@@ -129,7 +129,7 @@
 
     "@isaacs/nonrecursive-glob-match": ["@isaacs/nonrecursive-glob-match@1.0.3", "", {}, "sha512-SI7kyKHq4XXDRozw+r9GlRZkia1ZkFrpLW98r2IC2Bpr8YkFGE3fvjzmxCG0x78A++69HmDNrDvSMYBZmHGpKA=="],
 
-    "@kagayoi/support-extension": ["@kagayoi/support-extension@1.0.9", "", { "bin": { "kagayoi-support-sync": "bin/kagayoi-support-sync.mjs" } }, "sha512-51zr97JiPTkmmqYJT8NfuqYMnnrUFyIxuyHDNCncENQdvhLhpbIoKcsWIbqy/ThWln5FjCsyPvbTY7eEBcpO2Q=="],
+    "@kagayoi/support-extension": ["@kagayoi/support-extension@1.0.12", "", { "bin": { "kagayoi-support-sync": "bin/kagayoi-support-sync.mjs" } }, "sha512-EwYHu6bbHb/+NydLL5C3isALcPhxKB4tQLu3FRrDt4qzwxzY1k5cIr++JHi21C3ILYTqCjuN+9ewzmHJco9OQg=="],
 
     "@mdn/browser-compat-data": ["@mdn/browser-compat-data@8.1.4", "", {}, "sha512-Cgp3OP3u9x57kT1sZPI115SP5H1IyaBhdDPnvnHRYZ1988kW83wuqcIdcMinLJXlMKOL5Y2cufWHzngh5cVtow=="],
 

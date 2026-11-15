@@ -1,6 +1,6 @@
 #requires -Version 7.0
 [CmdletBinding()]
-param([switch]$Check, [switch]$DryRun, [string]$PreviewDirectory = "$PSScriptRoot/../webstore/images", [Net.Http.HttpMessageHandler]$HttpHandler)
+param([switch]$Check, [switch]$DryRun, [string]$PreviewDirectory = "$PSScriptRoot/../webstore/images/ja",[Net.Http.HttpMessageHandler]$HttpHandler)
 $ErrorActionPreference = 'Stop'
 Import-Module "$PSScriptRoot/Amo-Http.psm1" -Force
 $root = Split-Path $PSScriptRoot -Parent
@@ -8,7 +8,7 @@ $manifest = Get-Content "$root/manifest.json" -Raw | ConvertFrom-Json
 $addonId = $manifest.browser_specific_settings.gecko.id
 if (!$addonId) { throw 'Manifest Gecko ID is missing' }
 $path = '/api/v5/addons/addon/' + [Uri]::EscapeDataString($addonId) + '/'
-$files = @('01-feature-overview-1280x800.png','02-how-to-use-1280x800.png','03-hero-promo-1280x800.png') | ForEach-Object { Join-Path $PreviewDirectory $_ }
+$files = @('screenshot-01.png','screenshot-02.png','screenshot-03.png') | ForEach-Object { Join-Path $PreviewDirectory $_ }
 if (!$Check) {
     foreach ($file in $files) { if (!(Test-Path -LiteralPath $file -PathType Leaf)) { throw "Preview missing: $file; existing previews retained" } }
 }

@@ -4,7 +4,7 @@ This file provides guidance to Codex and other coding agents working in this rep
 
 ## Project Overview
 
-Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io の特定コレクション内ブックマークをワンクリックで一覧表示する。OAuth 2.0 認証、コレクション選択、ローカル検索フィルタ、ダークモード、リンク開き方選択、ローカルキャッシュによる高速表示に対応。UI は日本語。単一の `manifest.json` で Chrome (Service Worker) / Firefox 128+ (event page) 両方をサポートする。
+Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io の特定コレクション内ブックマークをワンクリックで一覧表示する。OAuth 2.0 認証、コレクション選択、ローカル検索フィルタ、ダークモード、リンク開き方選択、ローカルキャッシュによる高速表示に対応。UI は 9 言語（en ja zh_CN zh_TW ko es fr de pt_BR。`_locales` + `chrome.i18n` + `src/shared/ui-localizer.js`、設定画面のヘッダーで言語切替、文言は `Localizer.t` / `data-i18n`）。単一の `manifest.json` で Chrome (Service Worker) / Firefox 128+ (event page) 両方をサポートする。
 
 ## Build Commands
 
@@ -12,7 +12,7 @@ Raindrop Shortcut は Chrome / Firefox 拡張機能 (Manifest V3)。Raindrop.io 
 bun --bun run build                 # アイコン PNG + ストア画像を一括生成
 bun --bun run test                      # Bun の node:test 互換テストを実行
 bun --bun run generate-icons        # icons/icon.svg → icons/icon-{16,48,128}.png (sharp)
-bun --bun run generate-screenshots  # webstore/0x-*.html → webstore/images/*.png (puppeteer)
+bun --bun run generate-screenshots  # webstore/store-assets.json → webstore/images/<locale>/screenshot-NN.png + tile-*.png (vitrina。Windows は release=9 言語、それ以外は smoke)
 ```
 
 パッケージ作成 (配布ファイルの配置は `scripts/stage-extension.js <output-directory> <chrome|firefox>` に共通化):
@@ -23,13 +23,17 @@ bash zip.sh                                        # 同等 (bash 版)
 
 テストは `node:test` を Bun の互換ランナーで実行する。ブラウザ統合の最終動作確認は `chrome://extensions` に拡張機能を読み込んで手動テスト。
 
+- **Chrome を起動するスクリプトを足すときはシード必須**: puppeteer.launch・chrome-launcher・Chrome の直接起動は、起動前に user-data-dir の `Local State` へ `{"password_manager":{"os_password_blank":false,"os_password_last_changed":"9223372036854775000"}}` を書く。Windows の Chromium は新規プロファイルごとに空パスワードで LogonUser を呼び（`password_manager_util_win.cc` の `CheckBlankPasswordWithPrefs`）、ログオン失敗（Security 4625）として数えられるため、並列・連続起動で Windows アカウントがロックされる（2026-11-15 実害）。`scripts/chrome-profile-seed.mjs` の `createSeededProfile()` / `seedChromeProfile()` を使い、userDataDir 未指定の起動は作らない（`webstore/vitrina/` は逐語コピーで対策済み）。
+
 ## Source Layout
 
 ```
 src/
 ├── popup/              # ポップアップ UI (popup.html / popup.js / popup.css)
 ├── background/         # Service Worker (background.js) — OAuth 認証情報を保持
+├── shared/             # ui-localizer.js（Kagayoi 共通 i18n の逐語コピー。編集しない）と Kagayoi サポート同梱物
 └── lib/                # 共有定数 (actions.js) — popup / background 両方から読み込む
+_locales/               # 9 言語の messages.json（en が正本）
 icons/                  # 拡張機能アイコン (SVG 原本 + 生成 PNG)
 webstore/               # Chrome Web Store / Firefox AMO 掲載画像テンプレート + 掲載文言
 docs/                   # privacy-policy.md など
@@ -96,7 +100,11 @@ Service Worker。OAuth 2.0 フロー (`chrome.identity.launchWebAuthFlow` + stat
 CSS カスタムプロパティでライト/ダーク切替。`auto` = OS 追従、`light`/`dark` = `<html>` にクラス付与で強制。
 
 ### ストア画像 (webstore/)
-`01-*.html` 〜 `05-*.html` が HTML テンプレート。`generate-screenshots.js` が puppeteer で PNG 出力。`store-listing.txt` は Chrome Web Store 掲載情報のコピペ用。
+Kagayoi 共通キット vitrina（`webstore/vitrina/`。`Kagayoi.Support/clients/chrome-extension/store-assets/` の逐語コピーで改変しない。同期は同ディレクトリの `sync-kit.mjs --repo <このリポジトリ>`）が、実拡張を puppeteer の Chrome for Testing へ読み込み、9 言語のスクリーンショット 4 枚とタイル 2 種を生成する。
+- 設定は `webstore/store-assets.json`、撮影前操作と Raindrop.io API の架空応答は `webstore/store-assets.steps.mjs`。ログイン済み状態は storage のダミートークン、API は Service Worker へ CDP の Fetch を張って固定応答、favicon は中立 SVG に差し替える。実トークン・実データ・他社ロゴは使わない。
+- `webstore/vitrina/vitrina.mjs generate` を直接呼ぶ（`--work-dir` 省略時は Windows で `D:\tmp\vitrina-RaindropShortcut`）。出力は `webstore/images/<locale>/screenshot-NN.png` と `tile-small.png` / `tile-marquee.png`（gitignore）。検証は `bun webstore/vitrina/vitrina.mjs verify`。
+- AMO のプレビュー画像は `webstore/images/ja/screenshot-01〜03.png`（`scripts/Update-AmoPreviews.ps1`）。
+- `store-listing.txt` は Chrome Web Store 掲載情報のコピペ用。
 
 ## Storage Schema
 
@@ -198,7 +206,20 @@ Firefox AMO も publish.yml の firefox job が `web-ext sign` (`--approval-time
 
 ### CWS 公開のHTTP境界
 
-`publish.yml` はビルド済みZIPを `scripts/Publish-Cws.ps1`（PowerShell 7）へ渡す。既存のOAuth secrets・publisher/item IDを維持し、ZIPをストリーム送信し、upload成功を確認してからpublishする。重複・通信断・不明な応答を公開成功として扱わず、ストア状態を確認してから再開する。公開専用npm CLIは使用しない。変更時はHTTP fixtureで成功・版/ID不一致・upload失敗・publish拒否を確認する。
+`publish.yml` はビルド済みZIPを `scripts/Publish-Cws.ps1`（PowerShell 7）へ渡す。既存のOAuth secrets・publisher/item IDを維持し、ZIPをストリーム送信し、upload成功を確認する（既定の `-Stage All` はその後publishまで行うが、CIは `-Stage Upload` でアップロードだけを行い、申請は `cws-submit.yml` が `-Stage Publish` で行う）。重複・通信断・不明な応答を公開成功として扱わず、ストア状態を確認してから再開する。公開専用npm CLIは使用しない。変更時はHTTP fixtureで成功・版/ID不一致・upload失敗・publish拒否を確認する。
+
+### CWS のアップロードと申請の分離
+
+`publish.yml` は検証済みZIPを `-Stage Upload` で下書きとしてアップロードするだけで、審査へは申請しない。新ロケールの掲載画像欄はアップロード後でないと Dashboard に出ないため、申請は別workflow `.github/workflows/cws-submit.yml`（手動実行、`-Stage Publish`）で行う。
+
+1. `release/x.y.z` を push する（publish.yml がアップロードする）
+2. Dashboard（Edictora）でロケール別の掲載画像などを整えて下書き保存する
+3. `gh workflow run cws-submit.yml -f version=x.y.z --ref release/x.y.z` で申請する
+
+- API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。`cws-submit.yml` は次を満たす場合だけ `:publish` する: 実行 ref が `release/<version>` で manifest の版が入力と一致する。`publish.yml` の直近のアップロード成功 run（固定ステップ名 `Chrome Web Store にアップロード（下書き）`。`actions: read` で履歴を参照）が同じ commit である。fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる。
+- 同版が申請済み・公開済み（PENDING_REVIEW / STAGED / PUBLISHED / PUBLISHED_TO_TESTERS）なら再送せず成功終了する。別版の審査中、より新しい版の存在、直近アップロードの進行中・失敗、状態不明は申請せず停止する。
+- Dashboard で手動アップロードした下書きなど、同じ commit のアップロード成功 run が無い場合は申請されない。その場合は Dashboard から手動で申請する。
+- 両workflowは同じ concurrency group で直列化する。申請中は Dashboard の操作を並行しない。
 
 ### AMO 公開のHTTP境界
 

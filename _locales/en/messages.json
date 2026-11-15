@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "Quickly search and open your Raindrop.io bookmarks"
+  },
+  "languageAuto": {
+    "message": "Auto (browser)"
+  },
+  "languageSelectLabel": {
+    "message": "Language"
+  },
+  "languageSelectTitle": {
+    "message": "Language. Open pages need a reload to update."
+  },
+  "loginTitleLine1": {
+    "message": "Your bookmarks,"
+  },
+  "loginTitleLine2": {
+    "message": "at a glance."
+  },
+  "loginDescription": {
+    "message": "Connect to Raindrop.io and open your favorite collections with one click."
+  },
+  "loginButton": {
+    "message": "Log in with Raindrop.io"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · OAuth 2.0 authentication",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "All"
+  },
+  "mainSearchPlaceholder": {
+    "message": "search…"
+  },
+  "mainSearchLabel": {
+    "message": "Search bookmarks"
+  },
+  "mainLoading": {
+    "message": "Loading"
+  },
+  "mainEmpty": {
+    "message": "No bookmarks"
+  },
+  "mainNoMatch": {
+    "message": "No matching bookmarks"
+  },
+  "settingsTitle": {
+    "message": "Settings"
+  },
+  "settingsBack": {
+    "message": "Back"
+  },
+  "settingsCollections": {
+    "message": "Collections"
+  },
+  "settingsOpenIn": {
+    "message": "Open in"
+  },
+  "settingsOpenNewTab": {
+    "message": "New tab"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "Current tab"
+  },
+  "settingsTheme": {
+    "message": "Theme"
+  },
+  "themeAuto": {
+    "message": "Auto"
+  },
+  "themeLight": {
+    "message": "Light"
+  },
+  "themeDark": {
+    "message": "Dark"
+  },
+  "settingsLogout": {
+    "message": "Log out"
+  },
+  "errorCommunication": {
+    "message": "Communication failed"
+  },
+  "errorNetwork": {
+    "message": "Could not connect to the network"
+  },
+  "errorLoadFailed": {
+    "message": "Failed to load"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "Failed to load collections"
+  },
+  "errorLoginFailed": {
+    "message": "Login failed"
+  },
+  "authWindowClosed": {
+    "message": "The authentication window was closed, or authentication failed"
+  },
+  "authCancelled": {
+    "message": "Authentication was cancelled"
+  },
+  "authError": {
+    "message": "Authentication error: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "The state of the authentication response does not match"
+  },
+  "authCodeMissing": {
+    "message": "Could not get the authorization code"
+  },
+  "tokenExchangeFailed": {
+    "message": "Token exchange failed"
+  },
+  "authSessionChanged": {
+    "message": "Your authentication state was updated. Please log in again."
+  },
+  "kagayoiSupportContact": {
+    "message": "Contact support"
+  },
+  "kagayoiSupportRate": {
+    "message": "Please rate us!"
+  }
+}

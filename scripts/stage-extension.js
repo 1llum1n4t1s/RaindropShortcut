@@ -22,7 +22,7 @@ if (fs.existsSync(destination)) {
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
 delete manifest.key;
 if (browser === 'firefox') {
-  manifest.background.scripts = ['src/lib/actions.js', 'src/background/background.js'];
+  manifest.background.scripts = ['src/shared/ui-localizer.js', 'src/lib/actions.js', 'src/background/background.js'];
 }
 fs.writeFileSync(path.join(destination, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
@@ -31,6 +31,8 @@ for (const size of [16, 48, 128]) {
   const filename = `icon-${size}.png`;
   fs.copyFileSync(path.join(root, 'icons', filename), path.join(destination, 'icons', filename));
 }
+// 9 言語の文言辞書 (manifest の __MSG_*__ と chrome.i18n が参照する)。
+fs.cpSync(path.join(root, '_locales'), path.join(destination, '_locales'), { recursive: true });
 fs.cpSync(path.join(root, 'src'), path.join(destination, 'src'), {
   recursive: true,
   filter: source => !/(?:\.DS_Store|\.swp|~)$/.test(path.basename(source)),

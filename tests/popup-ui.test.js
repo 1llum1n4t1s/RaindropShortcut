@@ -7,8 +7,13 @@ const test = require("node:test");
 const puppeteer = require("puppeteer");
 
 test("コレクション切替後の古い応答が読み込み表示や新しい一覧を上書きしない", { timeout: 30_000 }, async (t) => {
+  // Windows アカウントのロック防止（必須）: userDataDir 未指定だと新規プロファイルごとに空パスワード確認（LogonUser 失敗）が走るため、
+  // シード済みの一時プロファイルを渡し、終了時に片付ける。理由は scripts/chrome-profile-seed.mjs を参照。
+  const { createSeededProfile, removeSeededProfile } = await import("../scripts/chrome-profile-seed.mjs");
+  const userDataDir = createSeededProfile("raindrop-popup-test");
   const browser = await puppeteer.launch({
     executablePath: await puppeteer.executablePath(),
+    userDataDir,
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--allow-file-access-from-files"],
   });
@@ -52,6 +57,8 @@ test("コレクション切替後の古い応答が読み込み表示や新し�
                 remove: async () => {},
               } },
               tabs: { create: async () => {}, update: async () => {} },
+              // file:// では _locales を読めないので、ブラウザ標準の言語は英語・文言は空 (fallback の英語を使う) とする。
+              i18n: { getMessage: () => "", getUILanguage: () => "en" },
             };
           });
           await page.goto(pathToFileURL(resolve(__dirname, "../src/popup/popup.html")).href);
@@ -93,5 +100,6 @@ test("コレクション切替後の古い応答が読み込み表示や新し�
     }
   } finally {
     await browser.close();
+    removeSeededProfile(userDataDir);
   }
 });

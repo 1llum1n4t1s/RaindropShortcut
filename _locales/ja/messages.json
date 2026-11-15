@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "Raindrop.io のブックマークをすばやく検索・アクセスできる拡張機能"
+  },
+  "languageAuto": {
+    "message": "自動（ブラウザ）"
+  },
+  "languageSelectLabel": {
+    "message": "言語"
+  },
+  "languageSelectTitle": {
+    "message": "言語（開いているページは再読み込みで反映）"
+  },
+  "loginTitleLine1": {
+    "message": "ブックマークを"
+  },
+  "loginTitleLine2": {
+    "message": "一望する。"
+  },
+  "loginDescription": {
+    "message": "Raindrop.io と接続して、お気に入りのコレクションをワンクリックで開きます。"
+  },
+  "loginButton": {
+    "message": "Raindrop.io でログイン"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · 認証は OAuth 2.0",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "すべて"
+  },
+  "mainSearchPlaceholder": {
+    "message": "検索…"
+  },
+  "mainSearchLabel": {
+    "message": "ブックマークを検索"
+  },
+  "mainLoading": {
+    "message": "読み込み中"
+  },
+  "mainEmpty": {
+    "message": "ブックマークがありません"
+  },
+  "mainNoMatch": {
+    "message": "一致するブックマークがありません"
+  },
+  "settingsTitle": {
+    "message": "設定"
+  },
+  "settingsBack": {
+    "message": "戻る"
+  },
+  "settingsCollections": {
+    "message": "コレクション"
+  },
+  "settingsOpenIn": {
+    "message": "開き方"
+  },
+  "settingsOpenNewTab": {
+    "message": "新しいタブ"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "現在のタブ"
+  },
+  "settingsTheme": {
+    "message": "テーマ"
+  },
+  "themeAuto": {
+    "message": "自動"
+  },
+  "themeLight": {
+    "message": "ライト"
+  },
+  "themeDark": {
+    "message": "ダーク"
+  },
+  "settingsLogout": {
+    "message": "ログアウト"
+  },
+  "errorCommunication": {
+    "message": "通信に失敗しました"
+  },
+  "errorNetwork": {
+    "message": "ネットワークに接続できません"
+  },
+  "errorLoadFailed": {
+    "message": "読み込みに失敗しました"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "コレクションの取得に失敗しました"
+  },
+  "errorLoginFailed": {
+    "message": "ログインに失敗しました"
+  },
+  "authWindowClosed": {
+    "message": "認証ウィンドウが閉じられたか、認証に失敗しました"
+  },
+  "authCancelled": {
+    "message": "認証がキャンセルされました"
+  },
+  "authError": {
+    "message": "認証エラー: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "認証レスポンスの state が一致しません"
+  },
+  "authCodeMissing": {
+    "message": "認証コードを取得できませんでした"
+  },
+  "tokenExchangeFailed": {
+    "message": "トークン交換に失敗しました"
+  },
+  "authSessionChanged": {
+    "message": "認証状態が更新されたため、もう一度ログインしてください"
+  },
+  "kagayoiSupportContact": {
+    "message": "お問い合わせ"
+  },
+  "kagayoiSupportRate": {
+    "message": "評価をお願いします！"
+  }
+}

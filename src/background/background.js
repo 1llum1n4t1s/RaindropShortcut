@@ -1,12 +1,13 @@
 // Chrome (Service Worker) では importScripts でロード、Firefox (event page) では
 // manifest.json の background.scripts に列挙して先にロード済みなので skip する。
 if (typeof importScripts === "function") {
+importScripts("/src/shared/ui-localizer.js");
   importScripts("/src/lib/actions.js");
 }
 
-// ========== OAuth / API \u8a2d\u5b9a (background \u5c02\u7528) ==========
-// \u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u8a8d\u8a3c\u60c5\u5831\u306f popup \u5074\u304c\u53c2\u7167\u3057\u306a\u3044\u3088\u3046 background.js \u5185\u306b\u5206\u96e2\u3002
-// \u30af\u30e9\u30a4\u30a2\u30f3\u30c8\u306b\u7f6e\u3044\u3066\u3044\u308b\u9650\u308a secret \u306f\u914d\u5e03 ZIP \u7d4c\u7531\u3067\u6d41\u51fa\u3059\u308b\u305f\u3081\u3001\u30ed\u30fc\u30c6\u30fc\u30b7\u30e7\u30f3\u904b\u7528\u524d\u63d0\u3002
+// ========== OAuth / API 設定 (background 専用) ==========
+// クライアント認証情報は popup 側が参照しないよう background.js 内に分離。
+// クライアントに置いている限り secret は配布 ZIP 経由で流出するため、ローテーション運用前提。
 const OAuthConfig = Object.freeze({
   BASE_URL: "https://api.raindrop.io",
   AUTH_URL: "https://raindrop.io/oauth/authorize",
@@ -15,9 +16,9 @@ const OAuthConfig = Object.freeze({
   FETCH_TIMEOUT_MS: 15_000,
 });
 
-// Chrome \u3068 Firefox \u3067\u306f chrome.identity.getRedirectURL() \u306e\u623b\u308a\u5024\u30c9\u30e1\u30a4\u30f3\u304c\u7570\u306a\u308a
-// (Chrome: <id>.chromiumapp.org / Firefox: <sha1>.extensions.allizom.org)\u3001Raindrop.io \u304c
-// 1 \u30a2\u30d7\u30ea 1 redirect URI \u4ed5\u69d8\u306e\u305f\u3081\u3001\u305d\u308c\u305e\u308c\u5225\u306e OAuth \u30a2\u30d7\u30ea\u3092\u767b\u9332\u3057\u3066\u4f7f\u3044\u5206\u3051\u308b\u3002
+// Chrome と Firefox では chrome.identity.getRedirectURL() の戻り値ドメインが異なり
+// (Chrome: <id>.chromiumapp.org / Firefox: <sha1>.extensions.allizom.org)、Raindrop.io が
+// 1 アプリ 1 redirect URI 仕様のため、それぞれ別の OAuth アプリを登録して使い分ける。
 const OAuthClients = Object.freeze({
   chrome: {
     CLIENT_ID: "6a0c8f9f9a8b8816ae48158a",
@@ -38,15 +39,15 @@ function getOAuthClient() {
 
 const collator = new Intl.Collator("ja");
 
-// ========== \u30c8\u30fc\u30af\u30f3\u7ba1\u7406 ==========
+// ========== トークン管理 ==========
 
 async function getTokens() {
   return chrome.storage.local.get([...TokenStorageKeys]);
 }
 
 /**
- * \u9032\u884c\u4e2d\u306e refresh \u3092 coalescing \u3057\u3001\u4e26\u884c\u547c\u3073\u51fa\u3057\u6642\u306b\u30c8\u30fc\u30af\u30f3\u304c\u4e8c\u91cd\u767a\u884c\u3055\u308c\u306a\u3044\u3088\u3046\u306b\u3059\u308b\u3002
- * Raindrop \u306e refresh token \u30ed\u30fc\u30c6\u30fc\u30b7\u30e7\u30f3\u3067\u65e7\u30c8\u30fc\u30af\u30f3\u304c\u7121\u52b9\u5316\u3055\u308c\u308b\u306e\u3092\u9632\u3050\u3002
+ * 進行中の refresh を coalescing し、並行呼び出し時にトークンが二重発行されないようにする。
+ * Raindrop の refresh token ローテーションで旧トークンが無効化されるのを防ぐ。
  */
 let refreshPromise;
 let sessionGeneration = 0;
@@ -135,8 +136,8 @@ async function getValidToken(expectedGeneration = sessionGeneration) {
 }
 
 /**
- * refresh \u5931\u6557\u3092 network \u969c\u5bb3 vs \u30c8\u30fc\u30af\u30f3\u5931\u52b9\u3067\u5206\u3051\u3066\u8fd4\u3059\u3002
- * \u5730\u4e0b\u9244\u3067\u4e00\u6642\u7684\u306b\u5708\u5916\u2192\u5f37\u5236\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3068\u3044\u3046\u8aa4\u4f5c\u52d5\u3092\u9632\u3050\u3002
+ * refresh 失敗を network 障害 vs トークン失効で分けて返す。
+ * 地下鉄で一時的に圈外→強制ログイン画面という誤作動を防ぐ。
  */
 /**
  * @param {string} refreshToken
@@ -161,10 +162,10 @@ async function refreshAccessToken(refreshToken, generation) {
     }
 
     if (!res.ok) {
-      // 4xx \u306f\u30c8\u30fc\u30af\u30f3\u5931\u52b9\u3068\u307f\u306a\u3057\u3066\u30af\u30ea\u30a2 (OAuth 2.0 \u306e invalid_grant \u306f RFC 6749 \u00a75.2 \u3067
-      // HTTP 400 \u306a\u306e\u3067\u3001401/403 \u3060\u3051\u306b\u7d5e\u308b\u3068\u672c\u5f53\u306e\u5931\u52b9\u3067\u30c8\u30fc\u30af\u30f3\u304c\u6b8b\u308a\u7d9a\u3051\u3066\u3057\u307e\u3046)\u3002
-      // \u305f\u3060\u3057 429 (\u30ec\u30fc\u30c8\u5236\u9650) / 408 (\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8) \u306f\u4e00\u6642\u969c\u5bb3\u306a\u306e\u3067\u30c8\u30fc\u30af\u30f3\u3092\u6b8b\u3057\u3001
-      // \u518d\u8a66\u884c\u53ef\u80fd\u306a\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u7cfb\u30a8\u30e9\u30fc\u3068\u3057\u3066\u8fd4\u3059 (\u5f37\u5236\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u3092\u9632\u3050)\u3002
+      // 4xx はトークン失効とみなしてクリア (OAuth 2.0 の invalid_grant は RFC 6749 §5.2 で
+      // HTTP 400 なので、401/403 だけに絞ると本当の失効でトークンが残り続けてしまう)。
+      // ただし 429 (レート制限) / 408 (タイムアウト) は一時障害なのでトークンを残し、
+      // 再試行可能なネットワーク系エラーとして返す (強制ログイン画面を防ぐ)。
       const retryable = res.status === 429 || res.status === 408;
       if (res.status >= 400 && res.status < 500 && !retryable) {
         await clearTokens(generation);
@@ -176,7 +177,7 @@ async function refreshAccessToken(refreshToken, generation) {
     const saved = await saveTokens(json, { generation });
     return { token: saved ? json.access_token : null };
   } catch {
-    // \u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u65ad\u2192\u30c8\u30fc\u30af\u30f3\u306f\u6d88\u3055\u305a\u6b21\u56de\u30ea\u30c8\u30e9\u30a4\u306b\u8cbb\u3084\u3059
+    // ネットワーク断→トークンは消さず次回リトライに費やす
     return { token: null, networkError: true };
   }
 }
@@ -227,14 +228,14 @@ async function clearTokens(expectedGeneration = sessionGeneration) {
   return true;
 }
 
-// ========== fetch \u30d8\u30eb\u30d1\u30fc (\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8\u4ed8\u304d) ==========
+// ========== fetch ヘルパー (タイムアウト付き) ==========
 
 function fetchWithTimeout(url, opts = {}) {
   const signal = AbortSignal.timeout(OAuthConfig.FETCH_TIMEOUT_MS);
   return fetch(url, { ...opts, signal });
 }
 
-// ========== OAuth \u30d5\u30ed\u30fc ==========
+// ========== OAuth フロー ==========
 
 function randomState() {
   const buf = new Uint8Array(16);
@@ -242,7 +243,14 @@ function randomState() {
   return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** UI に出るエラー文言を、利用者が選んだ言語で引く。fallback は英語。 */
+function bgText(key, fallback, substitutions) {
+  return Localizer.t(key, substitutions, fallback);
+}
+
 async function handleLogin() {
+  // 保存済みの UI 言語の読み込み完了を待ってから文言を引く。
+  await Localizer.ready;
   const redirectUri = chrome.identity.getRedirectURL();
   const { CLIENT_ID, CLIENT_SECRET } = getOAuthClient();
   const state = randomState();
@@ -252,7 +260,7 @@ async function handleLogin() {
     `&response_type=code` +
     `&state=${state}`;
 
-  // 認証ウィンドウを閉じた場合等の英語例外は日本語へ正規化 (UI は日本語契約)
+  // 認証ウィンドウを閉じた場合等の英語例外は選択中の UI 言語の文言へ正規化
   let responseUrl;
   try {
     responseUrl = await chrome.identity.launchWebAuthFlow({
@@ -260,28 +268,28 @@ async function handleLogin() {
       interactive: true,
     });
   } catch {
-    throw new Error("認証ウィンドウが閉じられたか、認証に失敗しました");
+    throw new Error(bgText("authWindowClosed", "The authentication window was closed, or authentication failed"));
   }
 
   if (!responseUrl) {
-    throw new Error("\u8a8d\u8a3c\u304c\u30ad\u30e3\u30f3\u30bb\u30eb\u3055\u308c\u307e\u3057\u305f");
+    throw new Error(bgText("authCancelled", "Authentication was cancelled"));
   }
 
   const url = new URL(responseUrl);
   const err = url.searchParams.get("error");
   if (err) {
-    throw new Error(`\u8a8d\u8a3c\u30a8\u30e9\u30fc: ${err}`);
+    throw new Error(bgText("authError", `Authentication error: ${err}`, [err]));
   }
   if (url.searchParams.get("state") !== state) {
-    throw new Error("\u8a8d\u8a3c\u30ec\u30b9\u30dd\u30f3\u30b9\u306e state \u304c\u4e00\u81f4\u3057\u307e\u305b\u3093");
+    throw new Error(bgText("authStateMismatch", "The state of the authentication response does not match"));
   }
 
   const code = url.searchParams.get("code");
   if (!code) {
-    throw new Error("\u8a8d\u8a3c\u30b3\u30fc\u30c9\u3092\u53d6\u5f97\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f");
+    throw new Error(bgText("authCodeMissing", "Could not get the authorization code"));
   }
 
-  // refreshAccessToken \u3068\u540c\u69d8\u3001\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u65ad\u30fb\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8\u306e\u82f1\u8a9e\u4f8b\u5916\u306f\u65e5\u672c\u8a9e\u3078\u6b63\u898f\u5316
+  // refreshAccessToken と同様、ネットワーク断・タイムアウトの英語例外は選択中の UI 言語の文言へ正規化
   let json;
   try {
     const res = await fetchWithTimeout(OAuthConfig.TOKEN_URL, {
@@ -296,21 +304,21 @@ async function handleLogin() {
       }),
     });
     if (!res.ok) {
-      throw new Error("\u30c8\u30fc\u30af\u30f3\u4ea4\u63db\u306b\u5931\u6557\u3057\u307e\u3057\u305f");
+      throw new Error(bgText("tokenExchangeFailed", "Token exchange failed"));
     }
     json = await res.json();
   } catch (e) {
     if (e instanceof TypeError || e.name === "TimeoutError" || e.name === "AbortError") {
-      throw new Error("\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u306b\u63a5\u7d9a\u3067\u304d\u307e\u305b\u3093");
+      throw new Error(bgText("errorNetwork", "Could not connect to the network"));
     }
     throw e;
   }
   if (!(await establishSession(json))) {
-    throw new Error("認証状態が更新されたため、もう一度ログインしてください");
+    throw new Error(bgText("authSessionChanged", "Your authentication state was updated. Please log in again."));
   }
 }
 
-// ========== API \u30ec\u30a4\u30e4\u30fc ==========
+// ========== API レイヤー ==========
 
 /**
  * @param {string} path
@@ -405,8 +413,8 @@ async function fetchCollections() {
   const roots = rootRes.items || [];
   const children = childRes.items || [];
 
-  // \u89aa ID \u3054\u3068\u306b\u5b50\u3092\u30d0\u30b1\u30c3\u30c8\u5316\u3057\u3066 O(R+C) \u3067\u7a81\u5408\u3002
-  // /collections/childrens \u306f\u5b6b\u4ee5\u964d\u3082\u542b\u3080\u5168\u4e16\u4ee3\u3092\u8fd4\u3059\u305f\u3081\u3001childMap \u3082\u5168\u4e16\u4ee3\u3092\u4fdd\u6301\u3059\u308b\u3002
+  // 親 ID ごとに子をバケット化して O(R+C) で突合。
+  // /collections/childrens は孫以降も含む全世代を返すため、childMap も全世代を保持する。
   const nodeMap = new Map();
   const childMap = new Map();
   for (const c of children) {
@@ -421,8 +429,8 @@ async function fetchCollections() {
   const sortByTitle = (list) =>
     list.sort((a, b) => collator.compare(a.title, b.title));
 
-  // \u5404\u30ce\u30fc\u30c9\u3078\u81ea\u5206\u306e\u5b50\u3092\u63a5\u7d9a\u3059\u308b\u3002childMap \u306f\u5168\u4e16\u4ee3\u3092\u6301\u3064\u306e\u3067 1 \u30d1\u30b9\u3067\u591a\u6bb5\u306e\u6728\u304c\u5b8c\u6210\u3057\u3001
-  // 3 \u968e\u5c64\u4ee5\u4e0a\u306e\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u3082\u30eb\u30fc\u30c8\u914d\u4e0b\u304b\u3089\u5230\u9054\u3067\u304d\u308b (\u518d\u5e30\u306f\u4e0d\u8981)\u3002
+  // 各ノードへ自分の子を接続する。childMap は全世代を持つので 1 パスで多段の木が完成し、
+  // 3 階層以上のコレクションもルート配下から到達できる (再帰は不要)。
   for (const node of nodeMap.values()) {
     node.children = sortByTitle(childMap.get(node._id) || []);
   }
@@ -439,7 +447,7 @@ async function fetchCollections() {
   return { collections: tree };
 }
 
-/** \u30da\u30fc\u30b8\u6307\u5b9a\u306e\u30d6\u30c3\u30af\u30de\u30fc\u30af\u53d6\u5f97\u3002 */
+/** ページ指定のブックマーク取得。 */
 async function fetchBookmarks(
   collectionId,
   page = 0,
@@ -605,6 +613,8 @@ function runBackgroundRefresh() {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  // 拡張の更新後に UI 言語の辞書が古ければ作り直す (失敗しても本来の処理は止めない)。
+  Localizer.ready.then(() => Localizer.ensureFresh()).catch(() => {});
   ensureBookmarksRefreshAlarm().catch(() => {});
   runBackgroundRefresh();
 });
@@ -632,10 +642,10 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 // Firefox の alarm はブラウザ再起動で消えるため、background 起動ごとに存在を確認する。
 ensureBookmarksRefreshAlarm().catch(() => {});
 
-// ========== \u30e1\u30c3\u30bb\u30fc\u30b8\u30cf\u30f3\u30c9\u30e9 ==========
+// ========== メッセージハンドラ ==========
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // \u81ea\u62e1\u5f35 (popup / background) \u5916\u304b\u3089\u306e\u30e1\u30c3\u30bb\u30fc\u30b8\u306f\u5b8c\u5168\u7121\u8996
+  // 自拡張 (popup / background) 外からのメッセージは完全無視
   if (sender.id !== chrome.runtime.id) return false;
 
   const handler = async () => {

@@ -8,12 +8,12 @@
     "sync:support": "bun --preserve-symlinks-main ./node_modules/@kagayoi/support-extension/bin/kagayoi-support-sync.mjs",
     "test": "bun scripts/verify-node-forge.js && bun test",
     "generate-icons": "bun scripts/generate-icons.js",
-    "generate-screenshots": "bun webstore/generate-screenshots.js",
+    "generate-screenshots": "bun webstore/vitrina/vitrina.mjs generate",
     "build": "bun --bun run sync:support && bun --bun run generate-icons && bun --bun run generate-screenshots",
     "test:dependencies": "bun test ./scripts/dependency-security.test.cjs"
   },
   "devDependencies": {
-    "@kagayoi/support-extension": "1.0.9",
+    "@kagayoi/support-extension": "1.0.12",
     "puppeteer": "^25.16.0",
     "sharp": "^0.35.5",
     "web-ext": "10.8.0"

@@ -16,6 +16,7 @@ const context = vm.createContext({
   clearTimeout,
   setTimeout,
   chrome: { runtime: { sendMessage() {} } },
+  Localizer: { applyDocumentLang() {} },
   document: { addEventListener() {} },
 });
 

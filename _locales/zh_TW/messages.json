@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "快速搜尋並開啟 Raindrop.io 書籤"
+  },
+  "languageAuto": {
+    "message": "自動（跟隨瀏覽器）"
+  },
+  "languageSelectLabel": {
+    "message": "語言"
+  },
+  "languageSelectTitle": {
+    "message": "語言（已開啟的頁面需重新整理後生效）"
+  },
+  "loginTitleLine1": {
+    "message": "一眼看清"
+  },
+  "loginTitleLine2": {
+    "message": "所有書籤。"
+  },
+  "loginDescription": {
+    "message": "連接 Raindrop.io，一鍵開啟常用收藏集。"
+  },
+  "loginButton": {
+    "message": "使用 Raindrop.io 登入"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · OAuth 2.0 驗證",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "全部"
+  },
+  "mainSearchPlaceholder": {
+    "message": "搜尋…"
+  },
+  "mainSearchLabel": {
+    "message": "搜尋書籤"
+  },
+  "mainLoading": {
+    "message": "載入中"
+  },
+  "mainEmpty": {
+    "message": "沒有書籤"
+  },
+  "mainNoMatch": {
+    "message": "沒有符合的書籤"
+  },
+  "settingsTitle": {
+    "message": "設定"
+  },
+  "settingsBack": {
+    "message": "返回"
+  },
+  "settingsCollections": {
+    "message": "收藏集"
+  },
+  "settingsOpenIn": {
+    "message": "開啟方式"
+  },
+  "settingsOpenNewTab": {
+    "message": "新分頁"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "目前分頁"
+  },
+  "settingsTheme": {
+    "message": "主題"
+  },
+  "themeAuto": {
+    "message": "自動"
+  },
+  "themeLight": {
+    "message": "淺色"
+  },
+  "themeDark": {
+    "message": "深色"
+  },
+  "settingsLogout": {
+    "message": "登出"
+  },
+  "errorCommunication": {
+    "message": "通訊失敗"
+  },
+  "errorNetwork": {
+    "message": "無法連線到網路"
+  },
+  "errorLoadFailed": {
+    "message": "載入失敗"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "取得收藏集失敗"
+  },
+  "errorLoginFailed": {
+    "message": "登入失敗"
+  },
+  "authWindowClosed": {
+    "message": "驗證視窗已關閉，或驗證失敗"
+  },
+  "authCancelled": {
+    "message": "驗證已取消"
+  },
+  "authError": {
+    "message": "驗證錯誤：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "驗證回應的 state 不相符"
+  },
+  "authCodeMissing": {
+    "message": "無法取得授權碼"
+  },
+  "tokenExchangeFailed": {
+    "message": "權杖交換失敗"
+  },
+  "authSessionChanged": {
+    "message": "驗證狀態已更新，請重新登入"
+  },
+  "kagayoiSupportContact": {
+    "message": "聯絡支援"
+  },
+  "kagayoiSupportRate": {
+    "message": "請為我們評分！"
+  }
+}

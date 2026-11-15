@@ -117,7 +117,7 @@ if($Recipe -eq 'Raindrop') {
         $handler.Replies.Enqueue($(if($case -eq 'replacement-rejected'){'401|{"detail":"rejected"}'}else{'200|{"id":1}'}))
         if($case -eq 'partial-replacement'){$handler.Replies.Enqueue('401|{"detail":"rejected"}')}
         elseif($case -eq 'replace-success'){$handler.Replies.Enqueue('200|{"id":2}');$handler.Replies.Enqueue('200|{"id":3}');$handler.Replies.Enqueue('204|')}
-        foreach($name in '01-feature-overview-1280x800.png','02-how-to-use-1280x800.png','03-hero-promo-1280x800.png'){[IO.File]::WriteAllBytes((Join-Path $fixtureRoot $name),[byte[]](1,2,3))}
+        foreach($name in 'screenshot-01.png','screenshot-02.png','screenshot-03.png'){[IO.File]::WriteAllBytes((Join-Path $fixtureRoot $name),[byte[]](1,2,3))}
         $failed=$false
         try{& "$PSScriptRoot/Update-AmoPreviews.ps1" -PreviewDirectory $fixtureRoot -HttpHandler $handler}catch{$failed=$true}
         if($failed -ne ($case -ne 'replace-success')){throw "Unexpected replacement result: $case"}

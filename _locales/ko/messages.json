@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "Raindrop.io 북마크를 빠르게 검색하고 열 수 있는 확장 프로그램"
+  },
+  "languageAuto": {
+    "message": "자동(브라우저)"
+  },
+  "languageSelectLabel": {
+    "message": "언어"
+  },
+  "languageSelectTitle": {
+    "message": "언어(열려 있는 페이지는 새로고침 후 적용)"
+  },
+  "loginTitleLine1": {
+    "message": "북마크를"
+  },
+  "loginTitleLine2": {
+    "message": "한눈에 봅니다."
+  },
+  "loginDescription": {
+    "message": "Raindrop.io에 연결하여 즐겨 찾는 컬렉션을 한 번의 클릭으로 엽니다."
+  },
+  "loginButton": {
+    "message": "Raindrop.io로 로그인"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · OAuth 2.0 인증",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "전체"
+  },
+  "mainSearchPlaceholder": {
+    "message": "검색…"
+  },
+  "mainSearchLabel": {
+    "message": "북마크 검색"
+  },
+  "mainLoading": {
+    "message": "불러오는 중"
+  },
+  "mainEmpty": {
+    "message": "북마크가 없습니다"
+  },
+  "mainNoMatch": {
+    "message": "일치하는 북마크가 없습니다"
+  },
+  "settingsTitle": {
+    "message": "설정"
+  },
+  "settingsBack": {
+    "message": "뒤로"
+  },
+  "settingsCollections": {
+    "message": "컬렉션"
+  },
+  "settingsOpenIn": {
+    "message": "열기 방식"
+  },
+  "settingsOpenNewTab": {
+    "message": "새 탭"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "현재 탭"
+  },
+  "settingsTheme": {
+    "message": "테마"
+  },
+  "themeAuto": {
+    "message": "자동"
+  },
+  "themeLight": {
+    "message": "라이트"
+  },
+  "themeDark": {
+    "message": "다크"
+  },
+  "settingsLogout": {
+    "message": "로그아웃"
+  },
+  "errorCommunication": {
+    "message": "통신에 실패했습니다"
+  },
+  "errorNetwork": {
+    "message": "네트워크에 연결할 수 없습니다"
+  },
+  "errorLoadFailed": {
+    "message": "불러오지 못했습니다"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "컬렉션을 가져오지 못했습니다"
+  },
+  "errorLoginFailed": {
+    "message": "로그인에 실패했습니다"
+  },
+  "authWindowClosed": {
+    "message": "인증 창이 닫혔거나 인증에 실패했습니다"
+  },
+  "authCancelled": {
+    "message": "인증이 취소되었습니다"
+  },
+  "authError": {
+    "message": "인증 오류: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "인증 응답의 state가 일치하지 않습니다"
+  },
+  "authCodeMissing": {
+    "message": "인증 코드를 가져오지 못했습니다"
+  },
+  "tokenExchangeFailed": {
+    "message": "토큰 교환에 실패했습니다"
+  },
+  "authSessionChanged": {
+    "message": "인증 상태가 업데이트되었습니다. 다시 로그인해 주세요."
+  },
+  "kagayoiSupportContact": {
+    "message": "문의하기"
+  },
+  "kagayoiSupportRate": {
+    "message": "평가해 주세요!"
+  }
+}

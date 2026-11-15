@@ -107,6 +107,8 @@ function createHarness({
     URL,
     Uint8Array,
     chrome,
+    // 共通 i18n モジュールの代わり (文言の選択は別テストの対象外)。fallback の英語をそのまま返す。
+    Localizer: { ready: Promise.resolve(), ensureFresh: async () => {}, t: (_key, _subs, fallback) => fallback },
     console,
     crypto: webcrypto,
     fetch: async (url, options) => {

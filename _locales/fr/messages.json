@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "Recherchez et ouvrez rapidement vos favoris Raindrop.io"
+  },
+  "languageAuto": {
+    "message": "Automatique (navigateur)"
+  },
+  "languageSelectLabel": {
+    "message": "Langue"
+  },
+  "languageSelectTitle": {
+    "message": "Langue (les pages ouvertes se mettent à jour au rechargement)"
+  },
+  "loginTitleLine1": {
+    "message": "Tous vos favoris"
+  },
+  "loginTitleLine2": {
+    "message": "d’un seul coup d’œil."
+  },
+  "loginDescription": {
+    "message": "Connectez-vous à Raindrop.io et ouvrez vos collections favorites en un clic."
+  },
+  "loginButton": {
+    "message": "Se connecter avec Raindrop.io"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · Authentification OAuth 2.0",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "Toutes"
+  },
+  "mainSearchPlaceholder": {
+    "message": "rechercher…"
+  },
+  "mainSearchLabel": {
+    "message": "Rechercher dans les favoris"
+  },
+  "mainLoading": {
+    "message": "Chargement"
+  },
+  "mainEmpty": {
+    "message": "Aucun favori"
+  },
+  "mainNoMatch": {
+    "message": "Aucun favori correspondant"
+  },
+  "settingsTitle": {
+    "message": "Paramètres"
+  },
+  "settingsBack": {
+    "message": "Retour"
+  },
+  "settingsCollections": {
+    "message": "Collections"
+  },
+  "settingsOpenIn": {
+    "message": "Ouvrir dans"
+  },
+  "settingsOpenNewTab": {
+    "message": "Nouvel onglet"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "Onglet actuel"
+  },
+  "settingsTheme": {
+    "message": "Thème"
+  },
+  "themeAuto": {
+    "message": "Auto"
+  },
+  "themeLight": {
+    "message": "Clair"
+  },
+  "themeDark": {
+    "message": "Sombre"
+  },
+  "settingsLogout": {
+    "message": "Se déconnecter"
+  },
+  "errorCommunication": {
+    "message": "Échec de la communication"
+  },
+  "errorNetwork": {
+    "message": "Impossible de se connecter au réseau"
+  },
+  "errorLoadFailed": {
+    "message": "Échec du chargement"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "Échec de la récupération des collections"
+  },
+  "errorLoginFailed": {
+    "message": "Échec de la connexion"
+  },
+  "authWindowClosed": {
+    "message": "La fenêtre d’authentification a été fermée ou l’authentification a échoué"
+  },
+  "authCancelled": {
+    "message": "L’authentification a été annulée"
+  },
+  "authError": {
+    "message": "Erreur d’authentification : $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "Le paramètre state de la réponse d’authentification ne correspond pas"
+  },
+  "authCodeMissing": {
+    "message": "Impossible d’obtenir le code d’autorisation"
+  },
+  "tokenExchangeFailed": {
+    "message": "Échec de l’échange du jeton"
+  },
+  "authSessionChanged": {
+    "message": "L’état d’authentification a été mis à jour. Veuillez vous reconnecter."
+  },
+  "kagayoiSupportContact": {
+    "message": "Contacter le support"
+  },
+  "kagayoiSupportRate": {
+    "message": "Évaluez-nous !"
+  }
+}

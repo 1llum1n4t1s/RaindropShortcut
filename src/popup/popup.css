@@ -750,7 +750,24 @@ body::after {
   flex: 1;
 }
 
-.settings-spacer { width: 32px; }
+/* 言語切替。長い自称名 (Português (Brasil) など) でも見出しを押し出さない幅に抑える。 */
+.ui-language {
+  max-width: 132px;
+  height: 28px;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: var(--paper-card);
+  border: 1px solid var(--rule-bold);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.ui-language:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 .settings-body {
   flex: 1;

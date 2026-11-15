@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "快速搜索并打开 Raindrop.io 书签"
+  },
+  "languageAuto": {
+    "message": "自动（跟随浏览器）"
+  },
+  "languageSelectLabel": {
+    "message": "语言"
+  },
+  "languageSelectTitle": {
+    "message": "语言（已打开的页面需刷新后生效）"
+  },
+  "loginTitleLine1": {
+    "message": "一眼看清"
+  },
+  "loginTitleLine2": {
+    "message": "所有书签。"
+  },
+  "loginDescription": {
+    "message": "连接 Raindrop.io，一键打开常用收藏夹。"
+  },
+  "loginButton": {
+    "message": "使用 Raindrop.io 登录"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · OAuth 2.0 认证",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "全部"
+  },
+  "mainSearchPlaceholder": {
+    "message": "搜索…"
+  },
+  "mainSearchLabel": {
+    "message": "搜索书签"
+  },
+  "mainLoading": {
+    "message": "加载中"
+  },
+  "mainEmpty": {
+    "message": "没有书签"
+  },
+  "mainNoMatch": {
+    "message": "没有匹配的书签"
+  },
+  "settingsTitle": {
+    "message": "设置"
+  },
+  "settingsBack": {
+    "message": "返回"
+  },
+  "settingsCollections": {
+    "message": "收藏夹"
+  },
+  "settingsOpenIn": {
+    "message": "打开方式"
+  },
+  "settingsOpenNewTab": {
+    "message": "新标签页"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "当前标签页"
+  },
+  "settingsTheme": {
+    "message": "主题"
+  },
+  "themeAuto": {
+    "message": "自动"
+  },
+  "themeLight": {
+    "message": "浅色"
+  },
+  "themeDark": {
+    "message": "深色"
+  },
+  "settingsLogout": {
+    "message": "退出登录"
+  },
+  "errorCommunication": {
+    "message": "通信失败"
+  },
+  "errorNetwork": {
+    "message": "无法连接到网络"
+  },
+  "errorLoadFailed": {
+    "message": "加载失败"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "获取收藏夹失败"
+  },
+  "errorLoginFailed": {
+    "message": "登录失败"
+  },
+  "authWindowClosed": {
+    "message": "认证窗口已关闭，或认证失败"
+  },
+  "authCancelled": {
+    "message": "认证已取消"
+  },
+  "authError": {
+    "message": "认证错误：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "认证响应的 state 不匹配"
+  },
+  "authCodeMissing": {
+    "message": "无法获取授权码"
+  },
+  "tokenExchangeFailed": {
+    "message": "令牌交换失败"
+  },
+  "authSessionChanged": {
+    "message": "认证状态已更新，请重新登录"
+  },
+  "kagayoiSupportContact": {
+    "message": "联系支持"
+  },
+  "kagayoiSupportRate": {
+    "message": "请给我们评分！"
+  }
+}

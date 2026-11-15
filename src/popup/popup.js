@@ -1,6 +1,9 @@
 "use strict";
 
-// ========== \u30d8\u30eb\u30d1\u30fc ==========
+// <html lang> を同期で合わせる。Kagayoi のフッター (module) より先に classic script として実行する。
+Localizer.applyDocumentLang();
+
+// ========== ヘルパー ==========
 
 function debounce(fn, ms) {
   let id;
@@ -12,7 +15,7 @@ function debounce(fn, ms) {
 
 const sendMessage = (msg) => chrome.runtime.sendMessage(msg);
 
-/** \u691c\u7d22\u7528\u306e\u6b63\u898f\u5316\u30ad\u30fc\u3092\u4ed8\u4e0e\u3057\u3066\u304a\u304f (filter \u6642\u306e toLowerCase \u3092\u56de\u907f) */
+/** 検索用の正規化キーを付与しておく (filter 時の toLowerCase を回避) */
 function normalize(item) {
   return {
     ...item,
@@ -28,6 +31,12 @@ function isBookmarksCacheFresh(cache, now = Date.now()) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // 保存済みの UI 言語を読み込み、HTML の静的文言を置換して言語切替を組み立てる。
+  await Localizer.ready;
+  await Localizer.ensureFresh();
+  Localizer.localizeDocument();
+  Localizer.mountLanguageSelect(document.getElementById("uiLanguage"));
+  const t = (key, fallback, substitutions) => Localizer.t(key, substitutions, fallback);
   // 画面の状態と DOM 参照は、この popup のイベント処理だけで共有する。
   const state = {
     bookmarks: [],
@@ -48,7 +57,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const loginError = $("#login-error");
   // バージョン表記は manifest を正本にする (ハードコードだと更新漏れでズレる)
   $("#login-foot").textContent =
-    `v${chrome.runtime.getManifest().version} · 認証は OAuth 2.0`;
+    t("loginFoot", `v${chrome.runtime.getManifest().version} · OAuth 2.0 authentication`, [
+      chrome.runtime.getManifest().version,
+    ]);
 
   const collectionName = $("#collection-name");
   const btnSettings = $("#btn-settings");
@@ -64,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const linkModeBtns = $$(".link-mode-btn");
   const btnLogout = $("#btn-logout");
 
-  // ========== \u753b\u9762\u9077\u79fb ==========
+  // ========== 画面遷移 ==========
 
   function showScreen(name) {
     screenLogin.hidden = name !== Screens.LOGIN;
@@ -91,7 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // ========== \u30d6\u30c3\u30af\u30de\u30fc\u30af\u4e00\u89a7\u30ec\u30f3\u30c0\u30ea\u30f3\u30b0 ==========
+  // ========== ブックマーク一覧レンダリング ==========
 
   const bookmarkItems = new WeakMap();
 
@@ -149,8 +160,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (items.length === 0 && !state.loading) {
       emptyMessage.hidden = false;
       emptyMessage.textContent = state.searchQuery
-        ? "\u4e00\u81f4\u3059\u308b\u30d6\u30c3\u30af\u30de\u30fc\u30af\u304c\u3042\u308a\u307e\u305b\u3093"
-        : "\u30d6\u30c3\u30af\u30de\u30fc\u30af\u304c\u3042\u308a\u307e\u305b\u3093";
+        ? t("mainNoMatch", "No matching bookmarks")
+        : t("mainEmpty", "No bookmarks");
       return;
     }
 
@@ -160,7 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bookmarkList.appendChild(fragment);
   }
 
-  // ========== \u30ed\u30fc\u30c7\u30a3\u30f3\u30b0\u8868\u793a ==========
+  // ========== ローディング表示 ==========
 
   function showLoading() {
     loadingIndicator.hidden = false;
@@ -175,12 +186,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     hideLoading();
   }
 
-  // ========== \u30d6\u30c3\u30af\u30de\u30fc\u30af\u8aad\u307f\u8fbc\u307f ==========
+  // ========== ブックマーク読み込み ==========
 
   /**
-   * loadGeneration: \u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u5207\u308a\u66ff\u3048\u6642\u306b\u53e4\u3044\u975e\u540c\u671f\u30ed\u30fc\u30c9\u3092\u7121\u52b9\u5316\u3059\u308b\u30ad\u30e3\u30f3\u30bb\u30e9\u3002
-   * \u65b0\u3057\u3044 loadBookmarks() \u547c\u3073\u51fa\u3057\u3067 generation \u304c\u9032\u3080\u3068\u3001\u53e4\u3044 await \u304b\u3089\u5fa9\u5e30\u3057\u305f\u30ed\u30fc\u30c9\u306f
-   * currentGen !== loadGeneration \u3067\u65e9\u671f\u5fa9\u5e30\u3057\u3001stale \u306a\u7d50\u679c\u3067\u306e DOM \u6c5a\u67d3\u3092\u9632\u3050\u3002
+   * loadGeneration: コレクション切り替え時に古い非同期ロードを無効化するキャンセラ。
+   * 新しい loadBookmarks() 呼び出しで generation が進むと、古い await から復帰したロードは
+   * currentGen !== loadGeneration で早期復帰し、stale な結果での DOM 汚染を防ぐ。
    */
   let loadGeneration = 0;
 
@@ -199,7 +210,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const collectionId = state.selectedCollection?._id || 0;
 
-    // background \u5074\u3067\u5168\u30da\u30fc\u30b8\u53d6\u5f97\u3068\u30ad\u30e3\u30c3\u30b7\u30e5\u66f4\u65b0\u3092\u4e00\u5143\u5316\u3059\u308b\u3002
+    // background 側で全ページ取得とキャッシュ更新を一元化する。
     const result = await sendMessage({
       action: Actions.GET_BOOKMARKS,
       collectionId,
@@ -211,7 +222,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (!handleBookmarkError(result, !reset)) return;
 
-    // \u30ed\u30b0\u30a2\u30a6\u30c8\u3084 401 \u3067 generation \u304c\u9032\u3093\u3067\u3044\u305f\u3089\u3001state \u3082\u30ad\u30e3\u30c3\u30b7\u30e5\u3082\u66f8\u304d\u623b\u3055\u306a\u3044
+    // ログアウトや 401 で generation が進んでいたら、state もキャッシュも書き戻さない
     if (currentGen !== loadGeneration) {
       return;
     }
@@ -223,13 +234,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /**
-   * \u30d6\u30c3\u30af\u30de\u30fc\u30af API \u30ec\u30b9\u30dd\u30f3\u30b9\u306e\u30a8\u30e9\u30fc\u3092\u6271\u3046\u3002\u7d9a\u884c\u53ef\u306a\u3089 true\u3002
-   * silent=true \u306e\u5834\u5408 (\u30ad\u30e3\u30c3\u30b7\u30e5\u80cc\u666f\u306e\u30ea\u30d5\u30ec\u30c3\u30b7\u30e5) \u306f\u30a8\u30e9\u30fc UI \u3092\u51fa\u3055\u305a\u9ed9\u3063\u3066\u7d42\u4e86\u3059\u308b\u3002
+   * ブックマーク API レスポンスのエラーを扱う。続行可なら true。
+   * silent=true の場合 (キャッシュ背景のリフレッシュ) はエラー UI を出さず黙って終了する。
    */
   function handleBookmarkError(res, silent = false) {
     if (!res) {
       resetLoading();
-      if (!silent) showErrorMessage("\u901a\u4fe1\u306b\u5931\u6557\u3057\u307e\u3057\u305f");
+      if (!silent) showErrorMessage(t("errorCommunication", "Communication failed"));
       return false;
     }
     if (res.error === "unauthorized") {
@@ -238,12 +249,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (res.error === "network") {
       resetLoading();
-      if (!silent) showErrorMessage("\u30cd\u30c3\u30c8\u30ef\u30fc\u30af\u306b\u63a5\u7d9a\u3067\u304d\u307e\u305b\u3093");
+      if (!silent) showErrorMessage(t("errorNetwork", "Could not connect to the network"));
       return false;
     }
     if (res.error) {
       resetLoading();
-      if (!silent) showErrorMessage("\u8aad\u307f\u8fbc\u307f\u306b\u5931\u6557\u3057\u307e\u3057\u305f");
+      if (!silent) showErrorMessage(t("errorLoadFailed", "Failed to load"));
       return false;
     }
     return true;
@@ -280,12 +291,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.searchQuery = "";
     searchInput.value = "";
     bookmarkList.innerHTML = "";
-    collectionName.textContent = "すべて";
+    collectionName.textContent = t("collectionAll", "All");
     showScreen(Screens.LOGIN);
     return clearUserScopedStorage();
   }
 
-  // ========== \u691c\u7d22\u30d5\u30a3\u30eb\u30bf ==========
+  // ========== 検索フィルタ ==========
 
   // 初回表示や検索だけアニメーションし、取得後の差分更新では繰り返さない。
   function applyFilter(animate = false) {
@@ -304,13 +315,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     applyFilter(true);
   }, SharedConfig.SEARCH_DEBOUNCE_MS);
 
-  // ========== \u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u30c4\u30ea\u30fc ==========
+  // ========== コレクションツリー ==========
 
   function renderCollectionTree(collections) {
     collectionTree.innerHTML = "";
 
     const allItem = createCollectionItem(
-      { _id: 0, title: "\u3059\u3079\u3066", count: null },
+      { _id: 0, title: t("collectionAll", "All"), count: null },
       0,
     );
     collectionTree.appendChild(allItem);
@@ -361,7 +372,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         [StorageKeys.SELECTED_COLLECTION]: selected,
       });
 
-      collectionName.textContent = selected?.title || "\u3059\u3079\u3066";
+      collectionName.textContent = selected?.title || t("collectionAll", "All");
 
       showScreen(Screens.MAIN);
       loadBookmarks(true);
@@ -370,7 +381,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return div;
   }
 
-  // ========== \u30a4\u30d9\u30f3\u30c8\u30cf\u30f3\u30c9\u30e9 ==========
+  // ========== イベントハンドラ ==========
 
   btnLogin.addEventListener("click", async () => {
     btnLogin.disabled = true;
@@ -382,11 +393,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         // 別アカウントでログインし直した場合に前ユーザーの一覧・選択コレクションを持ち越さない
         await clearUserScopedStorage();
         state.selectedCollection = null;
-        collectionName.textContent = "すべて";
+        collectionName.textContent = t("collectionAll", "All");
         showScreen(Screens.MAIN);
         loadBookmarks(true);
       } else {
-        loginError.textContent = res?.error || "\u30ed\u30b0\u30a4\u30f3\u306b\u5931\u6557\u3057\u307e\u3057\u305f";
+        loginError.textContent = res?.error || t("errorLoginFailed", "Login failed");
         loginError.hidden = false;
       }
     } finally {
@@ -397,7 +408,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   btnSettings.addEventListener("click", async () => {
     showScreen(Screens.SETTINGS);
 
-    // \u30ad\u30e3\u30c3\u30b7\u30e5\u304c\u3042\u308c\u3070\u5373\u5ea7\u306b\u8868\u793a
+    // キャッシュがあれば即座に表示
     if (state.collections.length > 0) {
       renderCollectionTree(state.collections);
       return;
@@ -409,7 +420,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dot = document.createElement("span");
     dot.className = "pulse-dot";
     const label = document.createElement("span");
-    label.textContent = "\u8aad\u307f\u8fbc\u307f\u4e2d";
+    label.textContent = t("mainLoading", "Loading");
     loader.append(dot, label);
     collectionTree.appendChild(loader);
 
@@ -423,7 +434,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       collectionTree.innerHTML = "";
       const err = document.createElement("div");
       err.className = "empty-message";
-      err.textContent = "\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u306e\u53d6\u5f97\u306b\u5931\u6557\u3057\u307e\u3057\u305f";
+      err.textContent = t("errorCollectionsLoadFailed", "Failed to load collections");
       collectionTree.appendChild(err);
     }
   });
@@ -455,9 +466,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     await resetToLoginScreen();
   });
 
-  // ========== \u521d\u671f\u5316 ==========
+  // ========== 初期化 ==========
 
-  // \u30b9\u30c8\u30ec\u30fc\u30b8\u3068\u8a8d\u8a3c\u30c1\u30a7\u30c3\u30af\u3092\u4e26\u5217\u5316\u3057\u3066\u8d77\u52d5\u6642\u9593\u3092\u77ed\u7e2e
+  // ストレージと認証チェックを並列化して起動時間を短縮
   const [stored, authRes] = await Promise.all([
     chrome.storage.local.get([
       StorageKeys.THEME_MODE,
@@ -472,13 +483,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyLinkOpenMode(stored[StorageKeys.LINK_OPEN_MODE] || LinkOpenMode.NEW_TAB);
 
   state.selectedCollection = stored[StorageKeys.SELECTED_COLLECTION] || null;
-  collectionName.textContent = state.selectedCollection?.title || "\u3059\u3079\u3066";
+  collectionName.textContent = state.selectedCollection?.title || t("collectionAll", "All");
 
   if (authRes?.authenticated) {
     showScreen(Screens.MAIN);
 
-    // \u9078\u629e\u4e2d\u30b3\u30ec\u30af\u30b7\u30e7\u30f3\u306e\u30ad\u30e3\u30c3\u30b7\u30e5\u304c\u3042\u308c\u3070\u5373\u5ea7\u306b\u8868\u793a\u3059\u308b\u3002
-    // TTL \u8d85\u904e\u6642\u3082\u8868\u793a\u3092\u7dad\u6301\u3057\u3064\u3064\u3001\u88cf\u3067\u6700\u65b0\u30c7\u30fc\u30bf\u3092\u53d6\u5f97\u3059\u308b\u3002
+    // 選択中コレクションのキャッシュがあれば即座に表示する。
+    // TTL 超過時も表示を維持しつつ、裏で最新データを取得する。
     const cache = stored[StorageKeys.BOOKMARKS_CACHE];
     const selectedCollectionId = state.selectedCollection?._id || 0;
     const cacheMatchesSelection =
@@ -488,7 +499,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (cacheMatchesSelection) {
       state.bookmarks = cache.items.map(normalize);
-      // \u30ad\u30e3\u30c3\u30b7\u30e5\u521d\u56de\u8868\u793a\u306f\u300c\u521d\u3081\u3066\u898b\u305b\u308b\u300d\u30d5\u30a7\u30fc\u30c9\u30a4\u30f3
+      // キャッシュ初回表示は「初めて見せる」フェードイン
       renderBookmarks(state.bookmarks, true);
       if (!isBookmarksCacheFresh(cache)) {
         loadBookmarks(false);

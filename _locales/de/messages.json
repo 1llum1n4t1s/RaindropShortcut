@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "Raindrop.io-Lesezeichen schnell durchsuchen und öffnen"
+  },
+  "languageAuto": {
+    "message": "Automatisch (Browser)"
+  },
+  "languageSelectLabel": {
+    "message": "Sprache"
+  },
+  "languageSelectTitle": {
+    "message": "Sprache (geöffnete Seiten übernehmen sie nach dem Neuladen)"
+  },
+  "loginTitleLine1": {
+    "message": "Alle Lesezeichen"
+  },
+  "loginTitleLine2": {
+    "message": "auf einen Blick."
+  },
+  "loginDescription": {
+    "message": "Mit Raindrop.io verbinden und Lieblingssammlungen mit einem Klick öffnen."
+  },
+  "loginButton": {
+    "message": "Mit Raindrop.io anmelden"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · OAuth-2.0-Authentifizierung",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "Alle"
+  },
+  "mainSearchPlaceholder": {
+    "message": "suchen…"
+  },
+  "mainSearchLabel": {
+    "message": "Lesezeichen durchsuchen"
+  },
+  "mainLoading": {
+    "message": "Wird geladen"
+  },
+  "mainEmpty": {
+    "message": "Keine Lesezeichen"
+  },
+  "mainNoMatch": {
+    "message": "Keine passenden Lesezeichen"
+  },
+  "settingsTitle": {
+    "message": "Einstellungen"
+  },
+  "settingsBack": {
+    "message": "Zurück"
+  },
+  "settingsCollections": {
+    "message": "Sammlungen"
+  },
+  "settingsOpenIn": {
+    "message": "Öffnen in"
+  },
+  "settingsOpenNewTab": {
+    "message": "Neuer Tab"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "Aktueller Tab"
+  },
+  "settingsTheme": {
+    "message": "Design"
+  },
+  "themeAuto": {
+    "message": "Auto"
+  },
+  "themeLight": {
+    "message": "Hell"
+  },
+  "themeDark": {
+    "message": "Dunkel"
+  },
+  "settingsLogout": {
+    "message": "Abmelden"
+  },
+  "errorCommunication": {
+    "message": "Kommunikation fehlgeschlagen"
+  },
+  "errorNetwork": {
+    "message": "Keine Verbindung zum Netzwerk möglich"
+  },
+  "errorLoadFailed": {
+    "message": "Laden fehlgeschlagen"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "Sammlungen konnten nicht abgerufen werden"
+  },
+  "errorLoginFailed": {
+    "message": "Anmeldung fehlgeschlagen"
+  },
+  "authWindowClosed": {
+    "message": "Das Authentifizierungsfenster wurde geschlossen oder die Authentifizierung ist fehlgeschlagen"
+  },
+  "authCancelled": {
+    "message": "Die Authentifizierung wurde abgebrochen"
+  },
+  "authError": {
+    "message": "Authentifizierungsfehler: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "Der state der Authentifizierungsantwort stimmt nicht überein"
+  },
+  "authCodeMissing": {
+    "message": "Der Autorisierungscode konnte nicht abgerufen werden"
+  },
+  "tokenExchangeFailed": {
+    "message": "Tokenaustausch fehlgeschlagen"
+  },
+  "authSessionChanged": {
+    "message": "Der Authentifizierungsstatus wurde aktualisiert. Bitte melden Sie sich erneut an."
+  },
+  "kagayoiSupportContact": {
+    "message": "Support kontaktieren"
+  },
+  "kagayoiSupportRate": {
+    "message": "Bitte bewerten Sie uns!"
+  }
+}

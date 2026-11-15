@@ -20,7 +20,7 @@ async function verifyExtensionPackage(archivePath, browser, expectedVersion) {
   assert.equal(packageJson.version, expectedVersion, "package version differs from release version");
   delete manifest.key;
   if (browser === "firefox") {
-    manifest.background.scripts = ["src/lib/actions.js", "src/background/background.js"];
+    manifest.background.scripts = ["src/shared/ui-localizer.js", "src/lib/actions.js", "src/background/background.js"];
   }
 
   const payload = new Map();
@@ -41,9 +41,12 @@ async function verifyExtensionPackage(archivePath, browser, expectedVersion) {
     }
   }
   await addSource("src");
+  await addSource("_locales");
   for (const size of [16, 48, 128]) await addSource(`icons/icon-${size}.png`);
 
   for (const filename of [
+    "src/shared/ui-localizer.js",
+    ...["en", "ja", "zh_CN", "zh_TW", "ko", "es", "fr", "de", "pt_BR"].map((code) => `_locales/${code}/messages.json`),
     "src/lib/actions.js",
     "src/background/background.js",
     "src/popup/popup.html",

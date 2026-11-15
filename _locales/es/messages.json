@@ -1,0 +1,135 @@
+{
+  "appName": {
+    "message": "Raindrop Shortcuts"
+  },
+  "appDescription": {
+    "message": "Busque y abra rápidamente sus marcadores de Raindrop.io"
+  },
+  "languageAuto": {
+    "message": "Automático (navegador)"
+  },
+  "languageSelectLabel": {
+    "message": "Idioma"
+  },
+  "languageSelectTitle": {
+    "message": "Idioma (las páginas abiertas se actualizan al recargar)"
+  },
+  "loginTitleLine1": {
+    "message": "Todos sus marcadores"
+  },
+  "loginTitleLine2": {
+    "message": "de un vistazo."
+  },
+  "loginDescription": {
+    "message": "Conéctese a Raindrop.io y abra sus colecciones favoritas con un solo clic."
+  },
+  "loginButton": {
+    "message": "Iniciar sesión con Raindrop.io"
+  },
+  "loginFoot": {
+    "message": "v$VERSION$ · Autenticación OAuth 2.0",
+    "placeholders": {
+      "version": {
+        "content": "$1"
+      }
+    }
+  },
+  "collectionAll": {
+    "message": "Todas"
+  },
+  "mainSearchPlaceholder": {
+    "message": "buscar…"
+  },
+  "mainSearchLabel": {
+    "message": "Buscar marcadores"
+  },
+  "mainLoading": {
+    "message": "Cargando"
+  },
+  "mainEmpty": {
+    "message": "No hay marcadores"
+  },
+  "mainNoMatch": {
+    "message": "No hay marcadores coincidentes"
+  },
+  "settingsTitle": {
+    "message": "Ajustes"
+  },
+  "settingsBack": {
+    "message": "Volver"
+  },
+  "settingsCollections": {
+    "message": "Colecciones"
+  },
+  "settingsOpenIn": {
+    "message": "Abrir en"
+  },
+  "settingsOpenNewTab": {
+    "message": "Pestaña nueva"
+  },
+  "settingsOpenCurrentTab": {
+    "message": "Pestaña actual"
+  },
+  "settingsTheme": {
+    "message": "Tema"
+  },
+  "themeAuto": {
+    "message": "Auto"
+  },
+  "themeLight": {
+    "message": "Claro"
+  },
+  "themeDark": {
+    "message": "Oscuro"
+  },
+  "settingsLogout": {
+    "message": "Cerrar sesión"
+  },
+  "errorCommunication": {
+    "message": "Error de comunicación"
+  },
+  "errorNetwork": {
+    "message": "No se pudo conectar a la red"
+  },
+  "errorLoadFailed": {
+    "message": "Error al cargar"
+  },
+  "errorCollectionsLoadFailed": {
+    "message": "Error al obtener las colecciones"
+  },
+  "errorLoginFailed": {
+    "message": "Error al iniciar sesión"
+  },
+  "authWindowClosed": {
+    "message": "La ventana de autenticación se cerró o la autenticación falló"
+  },
+  "authCancelled": {
+    "message": "Se canceló la autenticación"
+  },
+  "authError": {
+    "message": "Error de autenticación: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "authStateMismatch": {
+    "message": "El valor state de la respuesta de autenticación no coincide"
+  },
+  "authCodeMissing": {
+    "message": "No se pudo obtener el código de autorización"
+  },
+  "tokenExchangeFailed": {
+    "message": "Error al intercambiar el token"
+  },
+  "authSessionChanged": {
+    "message": "Se actualizó el estado de autenticación. Vuelva a iniciar sesión."
+  },
+  "kagayoiSupportContact": {
+    "message": "Contactar con soporte"
+  },
+  "kagayoiSupportRate": {
+    "message": "¡Déjenos su valoración!"
+  }
+}
