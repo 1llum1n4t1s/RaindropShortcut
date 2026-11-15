@@ -1,0 +1,117 @@
+name: Chrome Web Store 申請（Submit for review）
+
+# publish.yml がアップロードした下書きを、審査へ申請する手動 workflow。
+# 新しいロケールのスクショ欄は、パッケージのアップロード後でないと Dashboard に出ない。
+# そのためアップロードと申請を分けている。
+#
+# 手順:
+#   1. release/x.y.z を push する（publish.yml が検証済みZIPを下書きとしてアップロードする）
+#   2. Dashboard でロケール別の掲載画像などを整えて下書き保存する
+#   3. gh workflow run cws-submit.yml -f version=x.y.z --ref release/x.y.z
+#
+# Chrome Web Store API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。
+# 代わりに次を満たす場合だけ申請する。
+#   - 実行 ref が release/<version> で、manifest の版が入力と一致する
+#   - publish.yml の直近のアップロード成功 run が、この ref と同じ commit である
+#   - fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる
+# 同版が申請済み・公開済みなら再送しない。確認できない状態は申請せず停止する。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 申請する版（x.y.z。release/x.y.z のブランチと manifest の版に一致させる）
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  # publish.yml のアップロード成功履歴を読む。
+  actions: read
+
+# publish.yml と同じ group で直列化し、アップロードと申請を並行させない。
+concurrency:
+  group: publish-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  submit:
+    name: Chrome Web Store 申請
+    if: ${{ github.ref_type == 'branch' && startsWith(github.ref, 'refs/heads/release/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout release commit with native git
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          auth=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+
+      - name: 入力の版・ブランチ・manifest の整合を確認
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version は x.y.z 形式で指定してください"
+            exit 1
+          fi
+          if [ "$REF_NAME" != "release/$INPUT_VERSION" ]; then
+            echo "::error::実行 ref ($REF_NAME) が release/$INPUT_VERSION ではありません。--ref release/$INPUT_VERSION を指定してください"
+            exit 1
+          fi
+          manifest_version=$(grep -oP '(?<="version": ")[^"]+' manifest.json)
+          if [ "$manifest_version" != "$INPUT_VERSION" ]; then
+            echo "::error::manifest の版 ($manifest_version) が入力 ($INPUT_VERSION) と一致しません"
+            exit 1
+          fi
+          echo "✅ 申請対象: $INPUT_VERSION ($REF_NAME)"
+
+      - name: アップロード段の成功履歴を確認
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPLOAD_STEP: 'Chrome Web Store にアップロード（下書き）'
+        run: |
+          set -euo pipefail
+          # publish.yml の直近のアップロード成功 run を探し、同じ commit であることを確認する。
+          # 別 commit のアップロードが後にあれば、Dashboard の下書きはそちらなので停止する。
+          export UPLOAD_JOB=""
+          latest_run=''
+          latest_sha=''
+          while IFS=$'\t' read -r run_id head_sha; do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
+              --jq '[.jobs[] | select(env.UPLOAD_JOB == "" or .name == env.UPLOAD_JOB) | .steps[]? | select(.name == env.UPLOAD_STEP and .conclusion == "success")] | length')
+            if [ "$count" -gt 0 ]; then
+              latest_run="$run_id"
+              latest_sha="$head_sha"
+              break
+            fi
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish.yml/runs?per_page=30" --jq '.workflow_runs[] | [.id, .head_sha] | @tsv')
+          if [ -z "$latest_run" ]; then
+            echo "::error::publish.yml のアップロード成功 run が見つかりません。先に release ブランチを push してアップロードしてください"
+            exit 1
+          fi
+          if [ "$latest_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::直近のアップロード成功 run ($latest_run) の commit ($latest_sha) が、この実行の commit ($GITHUB_SHA) と一致しません"
+            exit 1
+          fi
+          echo "✅ アップロード成功 run: $latest_run ($latest_sha)"
+
+      - name: Chrome Web Store へ申請
+        env:
+          CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          pwsh -NoProfile -File scripts/Test-PublishCws.ps1 -WorkDirectory "$RUNNER_TEMP/cws-publisher-tests"
+          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Stage Publish -Version "$RELEASE_VERSION"

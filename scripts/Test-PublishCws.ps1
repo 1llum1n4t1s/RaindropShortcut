@@ -185,6 +185,66 @@ foreach($case in 'missing-manifest','duplicate-manifest','missing-version'){
  }finally{$z.Dispose();$invalidStream.Dispose()}
  Invoke-BoundaryCase -Name $case -Bodies @() -Requests 0 -CaseArchive $invalidArchive | Out-Null
 }
+# Stage分離: Upload段は申請せず、Publish段はZIPをuploadしない。段の取り違えが通信前・申請前に止まることも確認する。
+function New-StageStatus {
+ param([string]$Property='publishedItemRevisionStatus',[string]$State='PUBLISHED',[string]$CrxVersion='0.1.0',[string]$Async,[string]$Identity=$name,[switch]$NoRevision)
+ $status=@{name=$Identity;itemId=$env:EXTENSION_ID}
+ if(!$NoRevision){$status[$Property]=@{state=$State;distributionChannels=@(@{crxVersion=$CrxVersion})}}
+ if($Async){$status.lastAsyncUploadState=$Async}
+ return ($status|ConvertTo-Json -Depth 10 -Compress)
+}
+function Invoke-StageCase {
+ param([string]$Name,[string[]]$Bodies,[int]$Requests,[bool]$ShouldFail,[ValidateSet('Upload','Publish')][string]$Stage,
+       [string]$Version,[string]$CaseArchive,[switch]$Preflight,[switch]$AllowUnpublished,[string]$Forbid,[string]$Require,[string]$Message)
+ $handler=[FixtureHandler]::new()
+ foreach($body in $Bodies){$handler.Bodies.Enqueue($body)}
+ $params=@{Stage=$Stage;HttpHandler=$handler}
+ if($CaseArchive){$params.Archive=$CaseArchive}
+ if($Version){$params.Version=$Version}
+ if($Preflight){$params.CheckExistingVersion=$true}
+ if($AllowUnpublished){$params.AllowUnpublishedItem=$true}
+ $text='';$failed=$false
+ try { $text=(& "$PSScriptRoot/Publish-Cws.ps1" @params | Out-String) } catch {$failed=$true;$text=$_.ToString()}
+ if($failed -ne $ShouldFail){throw "Unexpected stage result: $Name"}
+ if($handler.Requests.Count -ne $Requests){throw "Unsafe stage request count: $Name"}
+ if($Forbid -and @($handler.Requests|Where-Object{$_.Contains($Forbid)}).Count -ne 0){throw "Forbidden $Forbid request in stage case: $Name"}
+ if($Require -and @($handler.Requests|Where-Object{$_.Contains($Require)}).Count -ne 1){throw "Required $Require request missing in stage case: $Name"}
+ if($Message -and !$text.Contains($Message)){throw "Stage message mismatch: $Name"}
+ foreach($secret in 'fixture-token','secret','refresh'){if($text.Contains($secret)){throw "Credential appeared in stage output: $Name"}}
+ if($Stage -eq 'Upload' -and !$ShouldFail -and $handler.UploadBytes -ne (Get-Item $archive).Length){throw "Upload stream mismatch in stage case: $Name"}
+ [Console]::WriteLine("PASS $Name")
+}
+$bad=(@{name=$name;itemId=$env:EXTENSION_ID;uploadState='SUCCEEDED';crxVersion='9.9.9'}|ConvertTo-Json -Compress)
+$asyncUpload=(@{name=$name;itemId=$env:EXTENSION_ID;uploadState='IN_PROGRESS'}|ConvertTo-Json -Compress)
+$rejected=(@{name=$name;itemId=$env:EXTENSION_ID;state='REJECTED'}|ConvertTo-Json -Compress)
+# Upload段: uploadまでで終わり、:publishを送らない。
+Invoke-StageCase -Name 'upload-stage-no-publish' -Stage Upload -CaseArchive $archive -Bodies @($oauth,$upload) -Requests 2 -ShouldFail $false -Forbid ':publish' -Require ':upload' -Message 'NOT submitted'
+Invoke-StageCase -Name 'upload-stage-preflight-no-publish' -Stage Upload -CaseArchive $archive -Preflight -Bodies @($oauth,(New-StageStatus),$upload) -Requests 3 -ShouldFail $false -Forbid ':publish'
+Invoke-StageCase -Name 'upload-stage-async-stops' -Stage Upload -CaseArchive $archive -Bodies @($oauth,$asyncUpload) -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'upload-stage-wrong-version-stops' -Stage Upload -CaseArchive $archive -Bodies @($oauth,$bad) -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'upload-stage-existing-version-stops' -Stage Upload -CaseArchive $archive -Preflight -Bodies @($oauth,(New-StageStatus -CrxVersion '1.2.3')) -Requests 2 -ShouldFail $true -Forbid ':upload'
+Invoke-StageCase -Name 'upload-stage-rejects-version-param' -Stage Upload -CaseArchive $archive -Version '1.2.3' -Bodies @() -Requests 0 -ShouldFail $true
+Invoke-StageCase -Name 'upload-stage-requires-archive' -Stage Upload -Bodies @() -Requests 0 -ShouldFail $true
+# Publish段: ZIPを送らず、fetchStatusで確認できる範囲を満たす場合だけ:publishを送る。
+Invoke-StageCase -Name 'publish-stage-submits-without-upload' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus),$published) -Requests 3 -ShouldFail $false -Forbid ':upload' -Require ':publish' -Message 'accepted version 1.2.3'
+Invoke-StageCase -Name 'publish-stage-numeric-version-order' -Stage Publish -Version '1.10.0' -Bodies @($oauth,(New-StageStatus -CrxVersion '1.9.0'),$published) -Requests 3 -ShouldFail $false -Forbid ':upload' -Require ':publish'
+Invoke-StageCase -Name 'publish-stage-rejects-archive' -Stage Publish -Version '1.2.3' -CaseArchive $archive -Bodies @() -Requests 0 -ShouldFail $true
+Invoke-StageCase -Name 'publish-stage-requires-version' -Stage Publish -Bodies @() -Requests 0 -ShouldFail $true
+Invoke-StageCase -Name 'publish-stage-invalid-version' -Stage Publish -Version '1.2.x' -Bodies @() -Requests 0 -ShouldFail $true
+foreach($sameState in @(@('submittedItemRevisionStatus','PENDING_REVIEW'),@('submittedItemRevisionStatus','STAGED'),@('publishedItemRevisionStatus','PUBLISHED'),@('publishedItemRevisionStatus','PUBLISHED_TO_TESTERS'))){
+ Invoke-StageCase -Name ('publish-stage-already-'+$sameState[1]) -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -Property $sameState[0] -State $sameState[1] -CrxVersion '1.2.3')) -Requests 2 -ShouldFail $false -Forbid ':publish' -Message 'publish not repeated'
+}
+Invoke-StageCase -Name 'publish-stage-rejected-same-version-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -Property 'submittedItemRevisionStatus' -State 'REJECTED' -CrxVersion '1.2.3')) -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'publish-stage-newer-store-version-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -CrxVersion '1.2.10')) -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'publish-stage-other-pending-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -Property 'submittedItemRevisionStatus' -State 'PENDING_REVIEW' -CrxVersion '1.0.0')) -Requests 2 -ShouldFail $true -Forbid ':publish'
+foreach($async in 'IN_PROGRESS','FAILED'){
+ Invoke-StageCase -Name ('publish-stage-last-upload-'+$async+'-stops') -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -Async $async)) -Requests 2 -ShouldFail $true -Forbid ':publish'
+}
+Invoke-StageCase -Name 'publish-stage-wrong-identity-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -Identity 'wrong')) -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'publish-stage-unknown-status-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus -NoRevision)) -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'publish-stage-first-time-item-allowed' -Stage Publish -Version '1.2.3' -AllowUnpublished -Bodies @($oauth,(New-StageStatus -NoRevision),$published) -Requests 3 -ShouldFail $false -Forbid ':upload' -Require ':publish'
+Invoke-StageCase -Name 'publish-stage-status-http-error-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,'HTTP401') -Requests 2 -ShouldFail $true -Forbid ':publish'
+Invoke-StageCase -Name 'publish-stage-unconfirmed-response-stops' -Stage Publish -Version '1.2.3' -Bodies @($oauth,(New-StageStatus),$rejected) -Requests 3 -ShouldFail $true -Forbid ':upload'
 # 同じpwshで同版を何度も呼べることに加え、別版は別型として動作することを確認する。
 $variantRoot=Join-Path $fixtureRoot 'variant'
 [IO.Directory]::CreateDirectory($variantRoot)|Out-Null

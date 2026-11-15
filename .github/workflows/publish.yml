@@ -1,4 +1,7 @@
 name: Publish to Stores
+# CWS は「アップロード」と「審査への申請」を別 workflow に分けている。
+# この workflow は検証済みZIPを下書きとしてアップロードするだけで、申請しない。
+# 申請は掲載画像などを Dashboard で整えた後に、cws-submit.yml を手動で実行する。
 
 on:
   push:
@@ -15,7 +18,7 @@ concurrency:
 
 jobs:
   chrome:
-    name: Chrome Web Store 公開
+    name: Chrome Web Store アップロード（申請は cws-submit.yml）
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release commit with native git
@@ -80,7 +83,7 @@ jobs:
           bun scripts/verify-extension-package.js raindrop-shortcut.zip chrome "$RELEASE_VERSION" > "$RUNNER_TEMP/chrome-verified.json"
           echo "CWS_VERIFIED_SHA256=$(python3 -c 'import json,os; print(json.load(open(os.environ["RUNNER_TEMP"]+"/chrome-verified.json"))["sha256"])')" >> "$GITHUB_ENV"
 
-      - name: Chrome Web Store にアップロード & 公開
+      - name: Chrome Web Store にアップロード（下書き）
         env:
           CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
@@ -89,7 +92,7 @@ jobs:
           EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
         run: |
           pwsh -NoProfile -File scripts/Test-PublishCws.ps1 -WorkDirectory "$RUNNER_TEMP/cws-publisher-tests"
-          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Archive "raindrop-shortcut.zip" -ExpectedSha256 "$CWS_VERIFIED_SHA256"
+          pwsh -NoProfile -File scripts/Publish-Cws.ps1 -Archive "raindrop-shortcut.zip" -ExpectedSha256 "$CWS_VERIFIED_SHA256" -Stage Upload
 
   firefox:
     name: Firefox AMO 公開
