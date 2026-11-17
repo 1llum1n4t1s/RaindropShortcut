@@ -140,7 +140,7 @@ export function tileMarqueeBody({ cfg, capture, smoke, notes }) {
  * 返値: { png, report: { ok, problems[], notes[], sizes } }
  * problems があっても PNG は返す（呼び出し側が失敗として扱い、画像を採用しない）。
  */
-export async function renderPage(page, { body, locale, cfg, size, notes = [], format = "png24", bodyClass = "" }) {
+export async function renderPage(page, { body, locale, cfg, size, notes = [], format = "png24", bodyClass = "", checkFonts = true }) {
   const html = documentHtml({ body, locale, cfg, size, bodyClass });
   await page.setViewport({ width: size.width, height: size.height, deviceScaleFactor: 1 });
   await page.setContent(html, { waitUntil: "load" });
@@ -151,8 +151,10 @@ export async function renderPage(page, { body, locale, cfg, size, notes = [], fo
   const fit = await page.evaluate(() => window.__vitrinaFit());
   const problems = fit.problems.map((p) => ({ type: "layout", ...p }));
 
-  // 実使用フォント: スライド文言（画像の中身ではなく HTML の文字）が許可リスト外なら失敗
-  const elements = await collectTextElements(page, { fonts: true });
+  // 実使用フォント: スライド文言（画像の中身ではなく HTML の文字）が許可リスト外なら失敗。
+  // smoke の板は「SMOKE」表示の代替画像で、Windows 同梱フォント前提の検査対象ではない（Linux の CI では
+  // 必ず別フォントになる）ため、checkFonts=false で省く。release（Windows）は従来どおり厳密に検査する。
+  const elements = checkFonts ? await collectTextElements(page, { fonts: true }) : [];
   const bad = new Map();
   for (const el of elements) {
     for (const font of el.fonts) {

@@ -135,7 +135,7 @@ async function generate(opts) {
       const notes = [];
       let result;
       try {
-        result = await renderPage(page, { body: job.body(notes), locale: job.locale, cfg, size: job.size, notes, format, bodyClass: job.bodyClass });
+        result = await renderPage(page, { body: job.body(notes), locale: job.locale, cfg, size: job.size, notes, format, bodyClass: job.bodyClass, checkFonts: !smoke });
       } catch (error) {
         failures.push({ label: job.label, problems: [{ type: "error", message: error.message }] });
         console.error(`[vitrina] FAIL ${job.label}: ${error.message}`);
