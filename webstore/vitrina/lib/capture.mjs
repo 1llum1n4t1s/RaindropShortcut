@@ -44,9 +44,9 @@ export async function importPuppeteer() {
   return mod.default ?? mod;
 }
 
-/** 設定ミス（相対パス等）の早期検出。work-dir は D:\tmp 配下などの未使用の絶対パス。 */
+/** 設定ミス（相対パス等）の早期検出。work-dir は %TEMP%（os.tmpdir()）配下などの未使用の絶対パス。 */
 export function assertWorkDir(workDir) {
-  if (!workDir || !path.isAbsolute(workDir)) throw new Error("--work-dir は絶対パスで指定してください（例: D:\\tmp\\<作業名>）");
+  if (!workDir || !path.isAbsolute(workDir)) throw new Error("--work-dir は絶対パスで指定してください（例: OS の一時フォルダー配下の vitrina-<リポジトリ名>）");
 }
 
 /**

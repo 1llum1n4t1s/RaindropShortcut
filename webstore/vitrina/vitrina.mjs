@@ -2,9 +2,9 @@
 // vitrina.mjs — Chrome Web Store 掲載画像（スクショ 3〜5 枚 × 9 言語、小タイル、マーキー）の生成・検証・一覧シート。
 //
 //   bun webstore/vitrina/vitrina.mjs generate [--work-dir <abs>] [--locales ja,de] [--out <dir>] [--profile release|smoke]
-//     （--work-dir 省略時: Windows は D:\tmp\vitrina-<リポジトリ名>、D: が無い・それ以外は OS 一時フォルダー配下）
+//     （--work-dir 省略時: OS の一時フォルダー（%TEMP% = os.tmpdir()）配下の vitrina-<リポジトリ名>）
 //   bun webstore/vitrina/vitrina.mjs verify   [--images-dir <dir>] [--locales ja,de]
-//   bun webstore/vitrina/vitrina.mjs sheet    --sheet-dir D:\tmp\<作業名>\sheet [--images-dir <dir>] [--locales ja,de]
+//   bun webstore/vitrina/vitrina.mjs sheet    --sheet-dir %TEMP%\<作業名>\sheet [--images-dir <dir>] [--locales ja,de]
 //
 // 共通オプション: --repo <abs>（既定: このファイルの 2 つ上 = リポジトリ直下）, --config <abs>（既定 webstore/store-assets.json）,
 //                --format png24|jpeg（既定 png24）

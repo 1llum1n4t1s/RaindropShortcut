@@ -44,11 +44,8 @@ export function seedChromeProfile(userDataDir) {
   });
 }
 
-/** 一時プロファイルの置き場。Windows は D:\tmp 配下（C を使わない）、それ以外は os.tmpdir()。 */
+/** 一時プロファイルの置き場。全 OS で os.tmpdir()（Windows は %TEMP%）に統一する。固定パスは持たない。 */
 export function tempProfileRoot() {
-  if (process.platform === "win32") {
-    try { fs.mkdirSync("D:/tmp", { recursive: true }); return "D:/tmp"; } catch { /* D ドライブが無ければ既定へ */ }
-  }
   return os.tmpdir();
 }
 

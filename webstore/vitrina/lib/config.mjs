@@ -9,18 +9,16 @@ export const LOCALES = Object.freeze(["en", "ja", "zh_CN", "zh_TW", "ko", "es", 
 
 /**
  * --work-dir の既定値。Chrome プロファイル・却下画像・ui-defects.json の置き場。
- *  - Windows で D: がある: D:\tmp\vitrina-<リポジトリ名>（C ドライブへ作業物を置かない運用）
- *  - それ以外（D: が無い Windows、CI の Linux 等）: OS の一時フォルダー配下の vitrina-<リポジトリ名>
- * 注意: JS 文字列では "D:\tmp" の \t がタブになるため、バックスラッシュは必ず "\\" と書く（過去の実害）。
- * platform / tmpdir / driveExists はテスト用の差し込み口。
+ * 一時物の置き場は %TEMP%（= Node の os.tmpdir()）に統一する。固定のドライブ・フォルダー（D 直下など）は使わない。
+ *  - 既定値: os.tmpdir() 配下の vitrina-<リポジトリ名>（Windows / CI の Linux とも同じ規則）
+ * 注意: バックスラッシュ入りのパス文字列を直書きしない（"\t" がタブになった過去の実害）。
+ *       パスは path.win32 / path.posix の join で組み立てる。
+ * platform / tmpdir はテスト用の差し込み口。
  */
-export function defaultWorkDir(repoRoot, { platform = process.platform, tmpdir = os.tmpdir(), driveExists = (drive) => fs.existsSync(drive) } = {}) {
+export function defaultWorkDir(repoRoot, { platform = process.platform, tmpdir = os.tmpdir() } = {}) {
   const flavor = platform === "win32" ? path.win32 : path.posix; // ホストと platform が違っても同じ結果にする（テスト用）
   const name = `vitrina-${flavor.basename(flavor.resolve(repoRoot))}`;
-  if (platform === "win32") {
-    return driveExists("D:\\") ? path.win32.join("D:\\", "tmp", name) : path.win32.join(tmpdir, name);
-  }
-  return path.posix.join(tmpdir, name);
+  return flavor.join(tmpdir, name);
 }
 
 /** 出力サイズ。 */
