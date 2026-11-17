@@ -102,7 +102,7 @@ CSS カスタムプロパティでライト/ダーク切替。`auto` = OS 追従
 ### ストア画像 (webstore/)
 Kagayoi 共通キット vitrina（`webstore/vitrina/`。`Kagayoi.Support/clients/chrome-extension/store-assets/` の逐語コピーで改変しない。同期は同ディレクトリの `sync-kit.mjs --repo <このリポジトリ>`）が、実拡張を puppeteer の Chrome for Testing へ読み込み、9 言語のスクリーンショット 4 枚とタイル 2 種を生成する。
 - 設定は `webstore/store-assets.json`、撮影前操作と Raindrop.io API の架空応答は `webstore/store-assets.steps.mjs`。ログイン済み状態は storage のダミートークン、API は Service Worker へ CDP の Fetch を張って固定応答、favicon は中立 SVG に差し替える。実トークン・実データ・他社ロゴは使わない。
-- `webstore/vitrina/vitrina.mjs generate` を直接呼ぶ（`--work-dir` 省略時は Windows で `D:\tmp\vitrina-RaindropShortcut`）。出力は `webstore/images/<locale>/screenshot-NN.png` と `tile-small.png` / `tile-marquee.png`（gitignore）。検証は `bun webstore/vitrina/vitrina.mjs verify`。
+- `webstore/vitrina/vitrina.mjs generate` を直接呼ぶ（`--work-dir` 省略時は `%TEMP%\vitrina-RaindropShortcut`）。出力は `webstore/images/<locale>/screenshot-NN.png` と `tile-small.png` / `tile-marquee.png`（gitignore）。検証は `bun webstore/vitrina/vitrina.mjs verify`。
 - AMO のプレビュー画像は `webstore/images/ja/screenshot-01〜03.png`（`scripts/Update-AmoPreviews.ps1`）。
 - `store-listing.txt` は Chrome Web Store 掲載情報のコピペ用。
 
@@ -189,7 +189,7 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 
 ## CI / Release
 
-`release/<X.Y.Z>` push が公開workflowを起動する。製品ビルド・最終アーカイブ検証後にPowerShell 7のHTTP publisherでCWSとAMOへ提出する。認証secret・publisher/item/GUIDを維持し、GitHub ActionsはSHA固定を維持する。
+`release/<X.Y.Z>` push が公開workflowを起動する。chrome・firefox の両 job は提出前に `bun --bun run test` を通し、失敗したら提出しない（同じテストは `dependency-validation.yml` で main への push と全 PR でも走る）。製品ビルド・最終アーカイブ検証後にPowerShell 7のHTTP publisherでCWSとAMOへ提出する。認証secret・publisher/item/GUIDを維持し、GitHub ActionsはSHA固定を維持する。
 
 バージョン更新は `/vava` スキルで `manifest.json` と `package.json` を同期し、`bun install --lockfile-only` で `bun.lock` を整合させる（PRIMARY_VERSION_FILE = manifest.json、SECONDARY = package.json/bun.lock）。
 

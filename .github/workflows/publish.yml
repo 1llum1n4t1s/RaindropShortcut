@@ -64,6 +64,9 @@ jobs:
         run: bun run test:dependencies
       - name: Sync support assets
         run: bun --bun run sync:support
+      # 成果物の作成・提出より前に本体のテストを通す。失敗したら提出しない。
+      - name: Test
+        run: bun --bun run test
 
       - name: アイコン生成
         run: bun scripts/generate-icons.js
@@ -140,6 +143,9 @@ jobs:
         run: bun run test:dependencies
       - name: Sync support assets
         run: bun --bun run sync:support
+      # 成果物の作成・提出より前に本体のテストを通す。失敗したら提出しない。
+      - name: Test
+        run: bun --bun run test
 
       - name: アイコン生成
         run: bun scripts/generate-icons.js
