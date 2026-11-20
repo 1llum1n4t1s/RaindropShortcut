@@ -5,8 +5,10 @@ name: Publish to Stores
 
 on:
   push:
-    branches:
-      - 'release/**'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  # push の run が出なかったときの再実行専用（入力なし）。一部 job の失敗は `gh run rerun <id> --failed` を使う。
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -41,17 +43,28 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "📦 公開対象バージョン: $version"
 
-      - name: ブランチ名とバージョンの整合性を確認
+      - name: タグと manifest バージョンの整合性を確認
+        # タグ（厳密な v<x.y.z>・軽量タグがこの commit を指す・既定ブランチの祖先）と manifest.json の版の一致を、無条件に確認する。
+        # Secrets を使う step より前に置く。
         env:
-          BRANCH_VERSION: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
           MANIFEST_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          expected="release/${MANIFEST_VERSION}"
-          if [ "$BRANCH_VERSION" != "$expected" ]; then
-            echo "::error::ブランチ名 ($BRANCH_VERSION) と manifest.json のバージョン ($MANIFEST_VERSION) が一致しません。期待値: $expected"
-            exit 1
-          fi
-          echo "✅ ブランチ名と manifest バージョン一致: $expected"
+          set -euo pipefail
+          version="$MANIFEST_VERSION"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || { echo "::error::タグ以外では配信しません: $GITHUB_REF"; exit 1; }
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::版タグ v<x.y.z> の形ではありません: $GITHUB_REF_NAME"; exit 1; }
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::commit id が不正です"; exit 1; }
+          [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::タグ ($GITHUB_REF_NAME) と manifest.json の版 ($version) が一致しません。期待値: v$version"; exit 1; }
+          # 軽量タグで、いまもこの commit を指すこと（注釈付きタグ・付け替え済みのタグを拒否する）。
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object.type + " " + .object.sha')" == "commit $GITHUB_SHA" ]] \
+            || { echo "::error::タグ $GITHUB_REF_NAME が $GITHUB_SHA を指す軽量タグではありません"; exit 1; }
+          # 既定ブランチの祖先であること（depth=1 の checkout では判定できないので compare API を使う）。
+          default="$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)"
+          [[ "$default" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "::error::既定ブランチ名が不正です"; exit 1; }
+          cmp="$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$default?per_page=1" --jq '.status + " " + (.behind_by | tostring)')"
+          [[ "$cmp" == "ahead 0" || "$cmp" == "identical 0" ]] || { echo "::error::$default の祖先ではありません ($cmp)"; exit 1; }
+          echo "✅ 配信対象: $GITHUB_REF_NAME ($GITHUB_SHA)"
 
       - name: Prepare Bun build toolchain
         shell: pwsh
@@ -121,17 +134,28 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "📦 公開対象バージョン: $version"
 
-      - name: ブランチ名とバージョンの整合性を確認
+      - name: タグと manifest バージョンの整合性を確認
+        # タグ（厳密な v<x.y.z>・軽量タグがこの commit を指す・既定ブランチの祖先）と manifest.json の版の一致を、無条件に確認する。
+        # Secrets を使う step より前に置く。
         env:
-          BRANCH_VERSION: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
           MANIFEST_VERSION: ${{ steps.version.outputs.version }}
         run: |
-          expected="release/${MANIFEST_VERSION}"
-          if [ "$BRANCH_VERSION" != "$expected" ]; then
-            echo "::error::ブランチ名 ($BRANCH_VERSION) と manifest.json のバージョン ($MANIFEST_VERSION) が一致しません。期待値: $expected"
-            exit 1
-          fi
-          echo "✅ ブランチ名と manifest バージョン一致: $expected"
+          set -euo pipefail
+          version="$MANIFEST_VERSION"
+          [[ "$GITHUB_REF_TYPE" == tag ]] || { echo "::error::タグ以外では配信しません: $GITHUB_REF"; exit 1; }
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || { echo "::error::版タグ v<x.y.z> の形ではありません: $GITHUB_REF_NAME"; exit 1; }
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::commit id が不正です"; exit 1; }
+          [[ "$GITHUB_REF_NAME" == "v$version" ]] || { echo "::error::タグ ($GITHUB_REF_NAME) と manifest.json の版 ($version) が一致しません。期待値: v$version"; exit 1; }
+          # 軽量タグで、いまもこの commit を指すこと（注釈付きタグ・付け替え済みのタグを拒否する）。
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object.type + " " + .object.sha')" == "commit $GITHUB_SHA" ]] \
+            || { echo "::error::タグ $GITHUB_REF_NAME が $GITHUB_SHA を指す軽量タグではありません"; exit 1; }
+          # 既定ブランチの祖先であること（depth=1 の checkout では判定できないので compare API を使う）。
+          default="$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)"
+          [[ "$default" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "::error::既定ブランチ名が不正です"; exit 1; }
+          cmp="$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$default?per_page=1" --jq '.status + " " + (.behind_by | tostring)')"
+          [[ "$cmp" == "ahead 0" || "$cmp" == "identical 0" ]] || { echo "::error::$default の祖先ではありません ($cmp)"; exit 1; }
+          echo "✅ 配信対象: $GITHUB_REF_NAME ($GITHUB_SHA)"
 
       - name: Prepare Bun build toolchain
         shell: pwsh

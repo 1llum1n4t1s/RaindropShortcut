@@ -189,7 +189,7 @@ JWT (HS256, payload `{iss, jti, iat, exp}` で exp は 60 秒程度) で `Author
 
 ## CI / Release
 
-`release/<X.Y.Z>` push が公開workflowを起動する。chrome・firefox の両 job は提出前に `bun --bun run test` を通し、失敗したら提出しない（同じテストは `dependency-validation.yml` で main への push と全 PR でも走る）。製品ビルド・最終アーカイブ検証後にPowerShell 7のHTTP publisherでCWSとAMOへ提出する。認証secret・publisher/item/GUIDを維持し、GitHub ActionsはSHA固定を維持する。
+`main` のコミットに付けた軽量タグ `v<X.Y.Z>` の push（`git push origin v<X.Y.Z>`。`git push --tags` は使わない）が公開workflowを起動する。タグの形・版・軽量タグ・`main` の祖先は Secrets を使う前に guard が確かめる。chrome・firefox の両 job は提出前に `bun --bun run test` を通し、失敗したら提出しない（同じテストは `dependency-validation.yml` で main への push と全 PR でも走る）。製品ビルド・最終アーカイブ検証後にPowerShell 7のHTTP publisherでCWSとAMOへ提出する。認証secret・publisher/item/GUIDを維持し、GitHub ActionsはSHA固定を維持する。
 
 バージョン更新は `/vava` スキルで `manifest.json` と `package.json` を同期し、`bun install --lockfile-only` で `bun.lock` を整合させる（PRIMARY_VERSION_FILE = manifest.json、SECONDARY = package.json/bun.lock）。
 
@@ -212,11 +212,11 @@ Firefox AMO も publish.yml の firefox job が `web-ext sign` (`--approval-time
 
 `publish.yml` は検証済みZIPを `-Stage Upload` で下書きとしてアップロードするだけで、審査へは申請しない。新ロケールの掲載画像欄はアップロード後でないと Dashboard に出ないため、申請は別workflow `.github/workflows/cws-submit.yml`（手動実行、`-Stage Publish`）で行う。
 
-1. `release/x.y.z` を push する（publish.yml がアップロードする）
+1. `main` を push してから、同じ commit に軽量タグ `vx.y.z` を付けて push する（publish.yml がアップロードする）
 2. Dashboard（Edictora）でロケール別の掲載画像などを整えて下書き保存する
-3. `gh workflow run cws-submit.yml -f version=x.y.z --ref release/x.y.z` で申請する
+3. `gh workflow run cws-submit.yml -f version=x.y.z --ref vx.y.z` で申請する
 
-- API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。`cws-submit.yml` は次を満たす場合だけ `:publish` する: 実行 ref が `release/<version>` で manifest の版が入力と一致する。`publish.yml` の直近のアップロード成功 run（固定ステップ名 `Chrome Web Store にアップロード（下書き）`。`actions: read` で履歴を参照）が同じ commit である。fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる。
+- API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。`cws-submit.yml` は次を満たす場合だけ `:publish` する: 実行 ref が軽量タグ `v<version>`（`main` の祖先）で manifest の版が入力と一致する。`publish.yml` の直近のアップロード成功 run（固定ステップ名 `Chrome Web Store にアップロード（下書き）`。`actions: read` で履歴を参照）が同じ commit で、同じタグから起動している。fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる。
 - 同版が申請済み・公開済み（PENDING_REVIEW / STAGED / PUBLISHED / PUBLISHED_TO_TESTERS）なら再送せず成功終了する。別版の審査中、より新しい版の存在、直近アップロードの進行中・失敗、状態不明は申請せず停止する。
 - Dashboard で手動アップロードした下書きなど、同じ commit のアップロード成功 run が無い場合は申請されない。その場合は Dashboard から手動で申請する。
 - 両workflowは同じ concurrency group で直列化する。申請中は Dashboard の操作を並行しない。

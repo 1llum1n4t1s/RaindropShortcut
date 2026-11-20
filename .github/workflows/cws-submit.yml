@@ -5,14 +5,14 @@ name: Chrome Web Store 申請（Submit for review）
 # そのためアップロードと申請を分けている。
 #
 # 手順:
-#   1. release/x.y.z を push する（publish.yml が検証済みZIPを下書きとしてアップロードする）
+#   1. main のコミットに軽量タグ vx.y.z を付けて push する（publish.yml が検証済みZIPを下書きとしてアップロードする）
 #   2. Dashboard でロケール別の掲載画像などを整えて下書き保存する
-#   3. gh workflow run cws-submit.yml -f version=x.y.z --ref release/x.y.z
+#   3. gh workflow run cws-submit.yml -f version=x.y.z --ref vx.y.z
 #
 # Chrome Web Store API v2 は未申請の下書き版を返さないため、下書きの版そのものは確認できない。
 # 代わりに次を満たす場合だけ申請する。
-#   - 実行 ref が release/<version> で、manifest の版が入力と一致する
-#   - publish.yml の直近のアップロード成功 run が、この ref と同じ commit である
+#   - 実行 ref が軽量タグ v<version>（厳密な形・main の祖先）で、manifest の版が入力と一致する
+#   - publish.yml の直近のアップロード成功 run が、この ref と同じ commit で、同じタグ（head_branch）から起動している
 #   - fetchStatus で item identity・直近アップロード状態・公開/審査中の版を確認できる
 # 同版が申請済み・公開済みなら再送しない。確認できない状態は申請せず停止する。
 
@@ -20,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 申請する版（x.y.z。release/x.y.z のブランチと manifest の版に一致させる）
+        description: 申請する版（x.y.z。タグ vx.y.z と manifest の版に一致させる）
         type: string
         required: true
 
@@ -38,7 +38,7 @@ concurrency:
 jobs:
   submit:
     name: Chrome Web Store 申請
-    if: ${{ github.ref_type == 'branch' && startsWith(github.ref, 'refs/heads/release/') }}
+    if: ${{ github.ref_type == 'tag' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout release commit with native git
@@ -53,18 +53,20 @@ jobs:
           git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" fetch --no-tags --depth=1 origin "$GITHUB_SHA"
           git checkout --detach FETCH_HEAD
 
-      - name: 入力の版・ブランチ・manifest の整合を確認
+      - name: 入力の版・タグ・manifest の整合を確認
+        # タグ（厳密な v<x.y.z>・軽量タグがこの commit を指す・既定ブランチの祖先）・入力の版・manifest の版の一致を、Secrets を使う step より前に無条件に確認する。
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_VERSION: ${{ inputs.version }}
           REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ ! "$INPUT_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "::error::version は x.y.z 形式で指定してください"
             exit 1
           fi
-          if [ "$REF_NAME" != "release/$INPUT_VERSION" ]; then
-            echo "::error::実行 ref ($REF_NAME) が release/$INPUT_VERSION ではありません。--ref release/$INPUT_VERSION を指定してください"
+          if [ "$REF_NAME" != "v$INPUT_VERSION" ]; then
+            echo "::error::実行 ref ($REF_NAME) が v$INPUT_VERSION ではありません。--ref v$INPUT_VERSION を指定してください"
             exit 1
           fi
           manifest_version=$(grep -oP '(?<="version": ")[^"]+' manifest.json)
@@ -72,6 +74,16 @@ jobs:
             echo "::error::manifest の版 ($manifest_version) が入力 ($INPUT_VERSION) と一致しません"
             exit 1
           fi
+          [[ "$GITHUB_REF_TYPE" == tag ]] || { echo "::error::タグ以外では申請しません: $GITHUB_REF"; exit 1; }
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::commit id が不正です"; exit 1; }
+          # 軽量タグで、いまもこの commit を指すこと（注釈付きタグ・付け替え済みのタグを拒否する）。
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$REF_NAME" --jq '.object.type + " " + .object.sha')" == "commit $GITHUB_SHA" ]] \
+            || { echo "::error::タグ $REF_NAME が $GITHUB_SHA を指す軽量タグではありません"; exit 1; }
+          # 既定ブランチの祖先であること（depth=1 の checkout では判定できないので compare API を使う）。
+          default="$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)"
+          [[ "$default" =~ ^[A-Za-z0-9._/-]+$ ]] || { echo "::error::既定ブランチ名が不正です"; exit 1; }
+          cmp="$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...$default?per_page=1" --jq '.status + " " + (.behind_by | tostring)')"
+          [[ "$cmp" == "ahead 0" || "$cmp" == "identical 0" ]] || { echo "::error::$default の祖先ではありません ($cmp)"; exit 1; }
           echo "✅ 申請対象: $INPUT_VERSION ($REF_NAME)"
 
       - name: アップロード段の成功履歴を確認
@@ -85,24 +97,30 @@ jobs:
           export UPLOAD_JOB=""
           latest_run=''
           latest_sha=''
-          while IFS=$'\t' read -r run_id head_sha; do
+          latest_ref=''
+          while IFS=$'\t' read -r run_id head_sha head_branch; do
             count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
               --jq '[.jobs[] | select(env.UPLOAD_JOB == "" or .name == env.UPLOAD_JOB) | .steps[]? | select(.name == env.UPLOAD_STEP and .conclusion == "success")] | length')
             if [ "$count" -gt 0 ]; then
               latest_run="$run_id"
               latest_sha="$head_sha"
+              latest_ref="$head_branch"
               break
             fi
-          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish.yml/runs?per_page=30" --jq '.workflow_runs[] | [.id, .head_sha] | @tsv')
+          done < <(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/publish.yml/runs?per_page=30" --jq '.workflow_runs[] | [.id, .head_sha, .head_branch] | @tsv')
           if [ -z "$latest_run" ]; then
-            echo "::error::publish.yml のアップロード成功 run が見つかりません。先に release ブランチを push してアップロードしてください"
+            echo "::error::publish.yml のアップロード成功 run が見つかりません。先にタグ v<版> を push してアップロードしてください"
             exit 1
           fi
           if [ "$latest_sha" != "$GITHUB_SHA" ]; then
             echo "::error::直近のアップロード成功 run ($latest_run) の commit ($latest_sha) が、この実行の commit ($GITHUB_SHA) と一致しません"
             exit 1
           fi
-          echo "✅ アップロード成功 run: $latest_run ($latest_sha)"
+          if [ "$latest_ref" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::直近のアップロード成功 run ($latest_run) の起動元 ($latest_ref) が、この実行のタグ ($GITHUB_REF_NAME) と一致しません"
+            exit 1
+          fi
+          echo "✅ アップロード成功 run: $latest_run ($latest_sha, $latest_ref)"
 
       - name: Chrome Web Store へ申請
         env:
