@@ -129,7 +129,7 @@ Raindrop.io に保存されたブックマークをブラウザのポップア�
   api.raindrop.io / raindrop.io: Raindrop.io の公式 API からブックマーク・コレクション情報を取得し、OAuth 認証のトークン交換・更新を行うために使用します。support.kagayoi.com: 利用者が設定画面のお問い合わせフォームを送信したときだけ、メール確認と問い合わせ内容の送信に使用します。ブックマークや Raindrop.io の認証トークンは送信しません。
 
 ■ プライバシーポリシー URL
-https://raindropshortcuts.kagayoi.com/privacy
+https://privacy.kagayoi.com/raindropshortcuts
 
 ■ 外部サーバーとの通信について
 本拡張機能は以下の外部サーバーと通信します。
